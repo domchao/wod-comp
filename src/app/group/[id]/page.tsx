@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { signOut } from "@/app/auth/actions";
+import { HeaderMenu } from "./_components/HeaderMenu";
 import { deleteWorkout } from "./workout/actions";
 import { formatWeekStart, getWeekSetter } from "@/lib/rotation";
 import { sortSubmissions, formatValue } from "@/lib/submissions";
@@ -139,11 +139,7 @@ export default async function GroupPage({
     <main className="mx-auto max-w-lg p-6 space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{group.name}</h1>
-        <form action={signOut}>
-          <button type="submit" className="text-sm text-zinc-500 underline hover:text-zinc-900">
-            Sign out
-          </button>
-        </form>
+        <HeaderMenu groupId={id} />
       </div>
 
       <div className="space-y-3">
