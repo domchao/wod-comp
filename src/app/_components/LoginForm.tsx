@@ -17,6 +17,23 @@ export function LoginForm({ next }: { next?: string }) {
         <input type="hidden" name="mode" value={mode} />
         {next && <input type="hidden" name="next" value={next} />}
 
+        {mode === "signup" && (
+          <div className="space-y-1">
+            <label htmlFor="display_name" className="text-sm font-medium">
+              Display name
+            </label>
+            <input
+              id="display_name"
+              name="display_name"
+              type="text"
+              required
+              maxLength={50}
+              placeholder="How you'll appear to your group"
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            />
+          </div>
+        )}
+
         <div className="space-y-1">
           <label htmlFor="email" className="text-sm font-medium">
             Email
