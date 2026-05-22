@@ -37,6 +37,7 @@ describe("HeaderMenu", () => {
     it("hides the dropdown by default", () => {
       render(<HeaderMenu groupId={GROUP_ID} />);
       expect(screen.queryByRole("link", { name: /my stats/i })).toBeNull();
+      expect(screen.queryByRole("link", { name: /edit profile/i })).toBeNull();
       expect(screen.queryByRole("button", { name: /sign out/i })).toBeNull();
     });
   });
@@ -47,6 +48,7 @@ describe("HeaderMenu", () => {
       render(<HeaderMenu groupId={GROUP_ID} />);
       await user.click(screen.getByRole("button", { name: /menu/i }));
       expect(screen.getByRole("link", { name: /my stats/i })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /edit profile/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
     });
 
@@ -57,6 +59,16 @@ describe("HeaderMenu", () => {
       expect(screen.getByRole("link", { name: /my stats/i })).toHaveAttribute(
         "href",
         `/group/${GROUP_ID}/stats`
+      );
+    });
+
+    it("edit profile link points to /profile", async () => {
+      const user = userEvent.setup();
+      render(<HeaderMenu groupId={GROUP_ID} />);
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      expect(screen.getByRole("link", { name: /edit profile/i })).toHaveAttribute(
+        "href",
+        "/profile"
       );
     });
   });
@@ -76,6 +88,14 @@ describe("HeaderMenu", () => {
       await user.click(screen.getByRole("button", { name: /menu/i }));
       await user.click(screen.getByRole("link", { name: /my stats/i }));
       expect(screen.queryByRole("link", { name: /my stats/i })).toBeNull();
+    });
+
+    it("closes when edit profile is clicked", async () => {
+      const user = userEvent.setup();
+      render(<HeaderMenu groupId={GROUP_ID} />);
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      await user.click(screen.getByRole("link", { name: /edit profile/i }));
+      expect(screen.queryByRole("link", { name: /edit profile/i })).toBeNull();
     });
 
     it("closes when clicking outside the menu", async () => {
