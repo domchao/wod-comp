@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth/actions";
 import { deleteWorkout } from "./workout/actions";
 import { formatWeekStart, getWeekSetter } from "@/lib/rotation";
+import { sortSubmissions } from "@/lib/submissions";
 import Link from "next/link";
 
 const METRIC_LABELS: Record<string, string> = {
@@ -11,6 +12,18 @@ const METRIC_LABELS: Record<string, string> = {
   weight: "Max weight",
   rounds: "AMRAP",
 };
+
+function formatValue(value: number, metricType: string): string {
+  if (metricType === "time") {
+    const mins = Math.floor(value / 60);
+    const secs = value % 60;
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  }
+  if (metricType === "weight") return `${value} kg`;
+  if (metricType === "reps") return `${value} reps`;
+  if (metricType === "rounds") return `${value} rounds`;
+  return String(value);
+}
 
 export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -38,6 +51,13 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       .maybeSingle(),
   ]);
 
+  const { data: submissions } = currentWorkout
+    ? await supabase
+        .from("submissions")
+        .select("user_id, value, notes, profiles(name)")
+        .eq("workout_id", currentWorkout.id)
+    : { data: null };
+
   if (!group) redirect("/dashboard");
 
   const members = (
@@ -54,6 +74,18 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const isAdmin = group.admin_user_id === user.id;
   const isMyTurn = setterId === user.id;
   const canPost = (isMyTurn || isAdmin) && !currentWorkout;
+
+  type Submission = {
+    user_id: string;
+    value: number;
+    notes: string | null;
+    profiles: { name: string };
+  };
+  const rankedSubmissions = sortSubmissions(
+    (submissions ?? []) as unknown as Submission[],
+    currentWorkout?.metric_type ?? ""
+  );
+  const mySubmission = rankedSubmissions.find((s) => s.user_id === user.id);
 
   return (
     <main className="mx-auto max-w-lg p-6 space-y-8">
@@ -80,26 +112,34 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               <p className="text-sm text-zinc-500">{currentWorkout.description}</p>
             )}
             <p className="text-xs text-zinc-400">{METRIC_LABELS[currentWorkout.metric_type]}</p>
-            {isAdmin && (
-              <div className="flex gap-3 pt-1">
-                <Link
-                  href={`/group/${id}/workout/${currentWorkout.id}/edit`}
-                  className="text-xs text-zinc-500 underline hover:text-zinc-900"
-                >
-                  Edit
-                </Link>
-                <form action={deleteWorkout}>
-                  <input type="hidden" name="workout_id" value={currentWorkout.id} />
-                  <input type="hidden" name="group_id" value={id} />
-                  <button
-                    type="submit"
-                    className="text-xs text-red-500 underline hover:text-red-700"
+            <div className="flex gap-3 pt-1 flex-wrap">
+              <Link
+                href={`/group/${id}/submit`}
+                className="inline-block rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+              >
+                {mySubmission ? "Update your result" : "Log your result →"}
+              </Link>
+              {isAdmin && (
+                <>
+                  <Link
+                    href={`/group/${id}/workout/${currentWorkout.id}/edit`}
+                    className="text-xs text-zinc-500 underline hover:text-zinc-900"
                   >
-                    Delete
-                  </button>
-                </form>
-              </div>
-            )}
+                    Edit
+                  </Link>
+                  <form action={deleteWorkout}>
+                    <input type="hidden" name="workout_id" value={currentWorkout.id} />
+                    <input type="hidden" name="group_id" value={id} />
+                    <button
+                      type="submit"
+                      className="text-xs text-red-500 underline hover:text-red-700"
+                    >
+                      Delete
+                    </button>
+                  </form>
+                </>
+              )}
+            </div>
           </div>
         ) : canPost ? (
           <Link
@@ -112,6 +152,32 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           <p className="text-sm text-zinc-400">Waiting for workout to be posted...</p>
         )}
       </div>
+
+      {currentWorkout && rankedSubmissions.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Leaderboard
+          </h2>
+          <ol className="space-y-2">
+            {rankedSubmissions.map((submission, i) => (
+              <li key={submission.user_id} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-400 w-4">{i + 1}</span>
+                  <span className={submission.user_id === user.id ? "font-medium" : ""}>
+                    {submission.profiles.name}
+                    {submission.user_id === user.id && (
+                      <span className="text-xs text-zinc-400 ml-1">(you)</span>
+                    )}
+                  </span>
+                </div>
+                <span className="font-mono text-sm">
+                  {formatValue(submission.value, currentWorkout.metric_type)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       <div className="rounded-lg border border-zinc-200 p-4 space-y-1">
         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Invite code</p>
