@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sortSubmissions } from "@/lib/submissions";
+import { sortSubmissions, formatValue } from "@/lib/submissions";
 
 const make = (value: number) => ({ value });
 
@@ -49,5 +49,41 @@ describe("sortSubmissions", () => {
 
   it("handles a single submission", () => {
     expect(sortSubmissions([make(42)], "reps")).toEqual([make(42)]);
+  });
+});
+
+describe("formatValue", () => {
+  describe("time", () => {
+    it("formats whole minutes and seconds", () => {
+      expect(formatValue(150, "time")).toBe("2m 30s");
+    });
+
+    it("formats seconds only when under a minute", () => {
+      expect(formatValue(45, "time")).toBe("45s");
+    });
+
+    it("formats exactly one minute", () => {
+      expect(formatValue(60, "time")).toBe("1m 0s");
+    });
+
+    it("formats zero seconds", () => {
+      expect(formatValue(0, "time")).toBe("0s");
+    });
+  });
+
+  it("appends 'reps' for reps metric", () => {
+    expect(formatValue(42, "reps")).toBe("42 reps");
+  });
+
+  it("appends 'kg' for weight metric", () => {
+    expect(formatValue(100, "weight")).toBe("100 kg");
+  });
+
+  it("appends 'rounds' for rounds metric", () => {
+    expect(formatValue(5, "rounds")).toBe("5 rounds");
+  });
+
+  it("returns the raw value as a string for an unknown metric", () => {
+    expect(formatValue(99, "unknown")).toBe("99");
   });
 });

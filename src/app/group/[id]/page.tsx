@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth/actions";
 import { deleteWorkout } from "./workout/actions";
 import { formatWeekStart, getWeekSetter } from "@/lib/rotation";
-import { sortSubmissions } from "@/lib/submissions";
+import { sortSubmissions, formatValue } from "@/lib/submissions";
+import { CommentThread } from "./_components/CommentThread";
+import { ReactionBar } from "./_components/ReactionBar";
 import Link from "next/link";
 
 const METRIC_LABELS: Record<string, string> = {
@@ -12,18 +14,6 @@ const METRIC_LABELS: Record<string, string> = {
   weight: "Max weight",
   rounds: "AMRAP",
 };
-
-function formatValue(value: number, metricType: string): string {
-  if (metricType === "time") {
-    const mins = Math.floor(value / 60);
-    const secs = value % 60;
-    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-  }
-  if (metricType === "weight") return `${value} kg`;
-  if (metricType === "reps") return `${value} reps`;
-  if (metricType === "rounds") return `${value} rounds`;
-  return String(value);
-}
 
 export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -51,14 +41,25 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       .maybeSingle(),
   ]);
 
-  const { data: submissions } = currentWorkout
-    ? await supabase
-        .from("submissions")
-        .select("user_id, value, notes, profiles(name)")
-        .eq("workout_id", currentWorkout.id)
-    : { data: null };
-
   if (!group) redirect("/dashboard");
+
+  const [{ data: submissions }, { data: comments }, { data: reactionRows }] = currentWorkout
+    ? await Promise.all([
+        supabase
+          .from("submissions")
+          .select("id, user_id, value, profiles!submissions_user_id_fkey(name)")
+          .eq("workout_id", currentWorkout.id),
+        supabase
+          .from("comments")
+          .select("id, user_id, body, created_at, profiles!comments_user_id_fkey(name)")
+          .eq("workout_id", currentWorkout.id)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("reactions")
+          .select("submission_id, user_id, emoji, submissions!inner(workout_id)")
+          .eq("submissions.workout_id", currentWorkout.id),
+      ])
+    : ([{ data: null }, { data: null }, { data: null }] as const);
 
   const members = (
     group.group_members as unknown as {
@@ -75,17 +76,32 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const isMyTurn = setterId === user.id;
   const canPost = (isMyTurn || isAdmin) && !currentWorkout;
 
-  type Submission = {
+  type SubmissionRow = { id: string; user_id: string; value: number; profiles: { name: string } };
+  type Submission = SubmissionRow & { reactions: { user_id: string; emoji: string }[] };
+  type Comment = {
+    id: string;
     user_id: string;
-    value: number;
-    notes: string | null;
+    body: string;
+    created_at: string;
     profiles: { name: string };
   };
+
+  type ReactionRow = { submission_id: string; user_id: string; emoji: string };
+  const reactionMap = ((reactionRows ?? []) as unknown as ReactionRow[]).reduce<
+    Record<string, { user_id: string; emoji: string }[]>
+  >((acc, r) => {
+    (acc[r.submission_id] ??= []).push({ user_id: r.user_id, emoji: r.emoji });
+    return acc;
+  }, {});
+
   const rankedSubmissions = sortSubmissions(
-    (submissions ?? []) as unknown as Submission[],
+    ((submissions ?? []) as unknown as SubmissionRow[]).map(
+      (s): Submission => ({ ...s, reactions: reactionMap[s.id] ?? [] })
+    ),
     currentWorkout?.metric_type ?? ""
   );
   const mySubmission = rankedSubmissions.find((s) => s.user_id === user.id);
+  const typedComments = (comments ?? []) as unknown as Comment[];
 
   return (
     <main className="mx-auto max-w-lg p-6 space-y-8">
@@ -153,30 +169,53 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         )}
       </div>
 
-      {currentWorkout && rankedSubmissions.length > 0 && (
+      {currentWorkout && (
         <div className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
             Leaderboard
           </h2>
-          <ol className="space-y-2">
-            {rankedSubmissions.map((submission, i) => (
-              <li key={submission.user_id} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400 w-4">{i + 1}</span>
-                  <span className={submission.user_id === user.id ? "font-medium" : ""}>
-                    {submission.profiles.name}
-                    {submission.user_id === user.id && (
-                      <span className="text-xs text-zinc-400 ml-1">(you)</span>
-                    )}
-                  </span>
-                </div>
-                <span className="font-mono text-sm">
-                  {formatValue(submission.value, currentWorkout.metric_type)}
-                </span>
-              </li>
-            ))}
-          </ol>
+          {rankedSubmissions.length === 0 ? (
+            <p className="text-sm text-zinc-400">No results yet — be the first to log yours.</p>
+          ) : (
+            <ol className="space-y-4">
+              {rankedSubmissions.map((submission, i) => (
+                <li key={submission.user_id} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-400 w-4">{i + 1}</span>
+                      <span className={submission.user_id === user.id ? "font-medium" : ""}>
+                        {submission.profiles.name}
+                        {submission.user_id === user.id && (
+                          <span className="text-xs text-zinc-400 ml-1">(you)</span>
+                        )}
+                      </span>
+                    </div>
+                    <span className="font-mono text-sm">
+                      {formatValue(submission.value, currentWorkout.metric_type)}
+                    </span>
+                  </div>
+                  <div className="pl-6">
+                    <ReactionBar
+                      submissionId={submission.id}
+                      groupId={id}
+                      currentUserId={user.id}
+                      reactions={submission.reactions}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
+      )}
+
+      {currentWorkout && (
+        <CommentThread
+          workoutId={currentWorkout.id}
+          groupId={id}
+          currentUserId={user.id}
+          comments={typedComments}
+        />
       )}
 
       <div className="rounded-lg border border-zinc-200 p-4 space-y-1">
