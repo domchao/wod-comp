@@ -1,0 +1,136 @@
+"use client";
+
+import { useActionState } from "react";
+import { submitResult } from "./actions";
+
+type State = { error: string } | null;
+
+type Workout = {
+  id: string;
+  title: string;
+  description: string | null;
+  metric_type: string;
+};
+
+type ExistingSubmission = {
+  value: number;
+  notes: string | null;
+} | null;
+
+const METRIC_CONFIG: Record<string, { label: string; placeholder: string; step: string }> = {
+  reps: { label: "Reps completed", placeholder: "e.g. 45", step: "1" },
+  weight: { label: "Weight lifted", placeholder: "e.g. 100", step: "0.5" },
+  rounds: { label: "Rounds completed", placeholder: "e.g. 5", step: "1" },
+};
+
+export function SubmitForm({
+  groupId,
+  workout,
+  existing,
+}: {
+  groupId: string;
+  workout: Workout;
+  existing: ExistingSubmission;
+}) {
+  const [state, action, pending] = useActionState<State, FormData>(submitResult, null);
+  const isTime = workout.metric_type === "time";
+  const metric = METRIC_CONFIG[workout.metric_type];
+
+  const existingMins = existing ? Math.floor(existing.value / 60) : undefined;
+  const existingSecs = existing ? existing.value % 60 : undefined;
+
+  return (
+    <form action={action} className="space-y-5">
+      <input type="hidden" name="group_id" value={groupId} />
+      <input type="hidden" name="workout_id" value={workout.id} />
+
+      <div className="rounded-lg border border-zinc-200 p-4 space-y-1">
+        <p className="font-medium">{workout.title}</p>
+        {workout.description && <p className="text-sm text-zinc-500">{workout.description}</p>}
+      </div>
+
+      {isTime ? (
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Time</p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 space-y-1">
+              <label htmlFor="minutes" className="text-xs text-zinc-500">
+                Minutes
+              </label>
+              <input
+                id="minutes"
+                name="minutes"
+                type="number"
+                required
+                min="0"
+                step="1"
+                defaultValue={existingMins ?? ""}
+                placeholder="0"
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+              />
+            </div>
+            <span className="mt-5 text-zinc-400 font-medium">:</span>
+            <div className="flex-1 space-y-1">
+              <label htmlFor="seconds" className="text-xs text-zinc-500">
+                Seconds
+              </label>
+              <input
+                id="seconds"
+                name="seconds"
+                type="number"
+                required
+                min="0"
+                max="59"
+                step="1"
+                defaultValue={existingSecs ?? ""}
+                placeholder="00"
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-1">
+          <label htmlFor="value" className="text-sm font-medium">
+            {metric?.label}
+          </label>
+          <input
+            id="value"
+            name="value"
+            type="number"
+            required
+            min="0"
+            step={metric?.step}
+            defaultValue={existing?.value ?? ""}
+            placeholder={metric?.placeholder}
+            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+          />
+        </div>
+      )}
+
+      <div className="space-y-1">
+        <label htmlFor="notes" className="text-sm font-medium">
+          Notes <span className="text-zinc-400 font-normal">(optional)</span>
+        </label>
+        <textarea
+          id="notes"
+          name="notes"
+          rows={3}
+          defaultValue={existing?.notes ?? ""}
+          placeholder="Scaling, how it felt, rx'd..."
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+        />
+      </div>
+
+      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+      >
+        {pending ? "..." : existing ? "Update result" : "Submit result"}
+      </button>
+    </form>
+  );
+}
