@@ -22,21 +22,6 @@ export async function authWithEmail(_prevState: unknown, formData: FormData) {
   redirect(destination);
 }
 
-export async function signInWithGoogle(formData: FormData) {
-  const next = formData.get("next") as string | null;
-  const supabase = await createClient();
-  const callbackUrl = new URL(`${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`);
-  if (next?.startsWith("/")) callbackUrl.searchParams.set("next", next);
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo: callbackUrl.toString() },
-  });
-
-  if (error) redirect(`/?error=${encodeURIComponent(error.message)}`);
-  if (data.url) redirect(data.url);
-}
-
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

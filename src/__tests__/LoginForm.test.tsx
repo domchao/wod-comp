@@ -5,7 +5,6 @@ import { LoginForm } from "@/app/_components/LoginForm";
 
 vi.mock("@/app/auth/actions", () => ({
   authWithEmail: vi.fn(),
-  signInWithGoogle: vi.fn(),
 }));
 
 describe("LoginForm", () => {
@@ -15,18 +14,13 @@ describe("LoginForm", () => {
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
   });
 
-  it("renders the Continue with Google button", () => {
-    render(<LoginForm />);
-    expect(screen.getByRole("button", { name: /Continue with Google/i })).toBeInTheDocument();
-  });
-
-  it("includes a hidden next field in both forms when next prop is provided", () => {
+  it("includes a hidden next field when next prop is provided", () => {
     render(<LoginForm next="/invite/abc123" />);
-    const hiddenInputs = document.querySelectorAll<HTMLInputElement>(
+    const hiddenInput = document.querySelector<HTMLInputElement>(
       "input[type='hidden'][name='next']"
     );
-    expect(hiddenInputs).toHaveLength(2);
-    hiddenInputs.forEach((input) => expect(input.value).toBe("/invite/abc123"));
+    expect(hiddenInput).not.toBeNull();
+    expect(hiddenInput!.value).toBe("/invite/abc123");
   });
 
   it("does not render a next field when next prop is omitted", () => {
