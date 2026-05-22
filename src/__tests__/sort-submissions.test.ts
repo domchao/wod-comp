@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { sortSubmissions, formatValue } from "@/lib/submissions";
 
-const make = (value: number) => ({ value });
+const make = (value: number, rx = false) => ({ value, rx });
 
 describe("sortSubmissions", () => {
   describe("time metric", () => {
@@ -49,6 +49,25 @@ describe("sortSubmissions", () => {
 
   it("handles a single submission", () => {
     expect(sortSubmissions([make(42)], "reps")).toEqual([make(42)]);
+  });
+
+  describe("rx ranking", () => {
+    it("places Rx submissions above non-Rx regardless of value (reps)", () => {
+      const result = sortSubmissions([make(100), make(50, true)], "reps");
+      expect(result[0].rx).toBe(true);
+      expect(result[1].rx).toBe(false);
+    });
+
+    it("places Rx submissions above non-Rx regardless of value (time)", () => {
+      const result = sortSubmissions([make(60), make(120, true)], "time");
+      expect(result[0].rx).toBe(true);
+      expect(result[1].rx).toBe(false);
+    });
+
+    it("sorts Rx submissions among themselves by metric", () => {
+      const result = sortSubmissions([make(30, true), make(50, true)], "reps");
+      expect(result.map((s) => s.value)).toEqual([50, 30]);
+    });
   });
 });
 

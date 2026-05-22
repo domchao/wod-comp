@@ -70,7 +70,7 @@ export default async function GroupPage({
     ? await Promise.all([
         supabase
           .from("submissions")
-          .select("id, user_id, value, profiles!submissions_user_id_fkey(name)")
+          .select("id, user_id, value, notes, rx, profiles!submissions_user_id_fkey(name)")
           .eq("workout_id", currentWorkout.id),
         supabase
           .from("comments")
@@ -101,7 +101,14 @@ export default async function GroupPage({
   const isMyTurn = setterId === user.id;
   const canPost = (isMyTurn || isAdmin) && !currentWorkout;
 
-  type SubmissionRow = { id: string; user_id: string; value: number; profiles: { name: string } };
+  type SubmissionRow = {
+    id: string;
+    user_id: string;
+    value: number;
+    notes: string | null;
+    rx: boolean;
+    profiles: { name: string };
+  };
   type Submission = SubmissionRow & { reactions: { user_id: string; emoji: string }[] };
   type Comment = {
     id: string;
@@ -235,11 +242,19 @@ export default async function GroupPage({
                           <span className="text-xs text-zinc-400 ml-1">(you)</span>
                         )}
                       </span>
+                      {submission.rx && (
+                        <span className="text-xs font-semibold text-green-600 bg-green-50 dark:bg-green-950 dark:text-green-400 border border-green-200 dark:border-green-800 rounded px-1 py-0.5">
+                          Rx
+                        </span>
+                      )}
                     </div>
                     <span className="font-mono text-sm">
                       {formatValue(submission.value, currentWorkout.metric_type)}
                     </span>
                   </div>
+                  {submission.notes && (
+                    <p className="pl-6 text-xs text-zinc-500 italic">{submission.notes}</p>
+                  )}
                   <div className="pl-6">
                     <ReactionBar
                       submissionId={submission.id}

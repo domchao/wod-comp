@@ -1,10 +1,11 @@
-export function sortSubmissions<T extends { value: number }>(
+export function sortSubmissions<T extends { value: number; rx: boolean }>(
   submissions: T[],
   metricType: string
 ): T[] {
-  return [...submissions].sort((a, b) =>
-    metricType === "time" ? a.value - b.value : b.value - a.value
-  );
+  return [...submissions].sort((a, b) => {
+    if (a.rx !== b.rx) return a.rx ? -1 : 1;
+    return metricType === "time" ? a.value - b.value : b.value - a.value;
+  });
 }
 
 export function formatValue(value: number, metricType: string): string {

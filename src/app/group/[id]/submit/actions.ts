@@ -7,6 +7,7 @@ export async function submitResult(_prevState: unknown, formData: FormData) {
   const groupId = formData.get("group_id") as string;
   const workoutId = formData.get("workout_id") as string;
   const notes = (formData.get("notes") as string)?.trim() || null;
+  const rx = formData.get("rx") === "true";
 
   const rawMinutes = formData.get("minutes") as string | null;
   const rawSeconds = formData.get("seconds") as string | null;
@@ -43,7 +44,7 @@ export async function submitResult(_prevState: unknown, formData: FormData) {
   const { error } = await supabase
     .from("submissions")
     .upsert(
-      { workout_id: workoutId, user_id: user.id, value, notes },
+      { workout_id: workoutId, user_id: user.id, value, notes, rx },
       { onConflict: "workout_id,user_id" }
     );
 
