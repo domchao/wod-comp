@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useParams } from "next/navigation";
 import { createWorkout } from "../actions";
 
@@ -16,6 +16,14 @@ const METRIC_OPTIONS = [
 export default function NewWorkoutPage() {
   const { id } = useParams<{ id: string }>();
   const [state, action, pending] = useActionState<State, FormData>(createWorkout, null);
+  const [description, setDescription] = useState("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    const file = e.target.files?.[0];
+    setPreviewUrl(file ? URL.createObjectURL(file) : null);
+  }
 
   return (
     <main className="mx-auto max-w-lg p-6 space-y-6">
@@ -39,13 +47,37 @@ export default function NewWorkoutPage() {
         </div>
 
         <div className="space-y-1">
+          <label htmlFor="photo" className="text-sm font-medium">
+            Photo <span className="text-zinc-400 font-normal">(optional)</span>
+          </label>
+          <input
+            id="photo"
+            name="photo"
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="w-full text-sm text-zinc-500 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-zinc-200"
+          />
+          {previewUrl && (
+            <img
+              src={previewUrl}
+              alt="Preview"
+              className="mt-2 rounded-md max-h-48 w-full object-contain bg-zinc-50"
+            />
+          )}
+        </div>
+
+        <div className="space-y-1">
           <label htmlFor="description" className="text-sm font-medium">
             Description <span className="text-zinc-400 font-normal">(optional)</span>
           </label>
+          {/* description is controlled so it can be populated from photo extraction in future */}
           <textarea
             id="description"
             name="description"
             rows={4}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder="Movement standards, scaling options, notes..."
             className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
           />
@@ -57,7 +89,7 @@ export default function NewWorkoutPage() {
             {METRIC_OPTIONS.map((opt) => (
               <label
                 key={opt.value}
-                className="flex cursor-pointer flex-col rounded-md border border-zinc-200 p-3 hover:bg-zinc-50 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50"
+                className="flex cursor-pointer flex-col rounded-md border border-zinc-200 p-3 hover:bg-zinc-50 has-checked:border-zinc-900 has-checked:bg-zinc-50"
               >
                 <input
                   type="radio"
