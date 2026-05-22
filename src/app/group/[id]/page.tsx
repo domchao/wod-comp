@@ -8,6 +8,7 @@ import { CommentThread } from "./_components/CommentThread";
 import { ReactionBar } from "./_components/ReactionBar";
 import { WeekNav } from "./_components/WeekNav";
 import Link from "next/link";
+import { InviteSection } from "./_components/InviteSection";
 
 const METRIC_LABELS: Record<string, string> = {
   time: "For time",
@@ -275,13 +276,10 @@ export default async function GroupPage({
         />
       )}
 
-      <div className="rounded-lg border border-zinc-200 p-4 space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Invite code</p>
-        <p className="font-mono text-lg font-semibold tracking-widest">
-          {group.invite_code.toUpperCase()}
-        </p>
-        <p className="text-xs text-zinc-400">Share this with friends to join</p>
-      </div>
+      <InviteSection
+        inviteCode={group.invite_code}
+        siteUrl={process.env.NEXT_PUBLIC_SITE_URL ?? ""}
+      />
 
       <div className="space-y-3">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">

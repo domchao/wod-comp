@@ -5,7 +5,7 @@ import { authWithEmail, signInWithGoogle } from "@/app/auth/actions";
 
 type State = { error: string } | null;
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [state, action, pending] = useActionState<State, FormData>(authWithEmail, null);
 
@@ -15,6 +15,7 @@ export function LoginForm() {
 
       <form action={action} className="space-y-4">
         <input type="hidden" name="mode" value={mode} />
+        {next && <input type="hidden" name="next" value={next} />}
 
         <div className="space-y-1">
           <label htmlFor="email" className="text-sm font-medium">
@@ -64,6 +65,7 @@ export function LoginForm() {
       </div>
 
       <form action={signInWithGoogle}>
+        {next && <input type="hidden" name="next" value={next} />}
         <button
           type="submit"
           className="w-full rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
