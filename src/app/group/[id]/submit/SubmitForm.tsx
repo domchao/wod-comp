@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { submitResult } from "./actions";
 
 type State = { error: string } | null;
@@ -15,6 +15,7 @@ type Workout = {
 type ExistingSubmission = {
   value: number;
   notes: string | null;
+  rx: boolean;
 } | null;
 
 const METRIC_CONFIG: Record<string, { label: string; placeholder: string; step: string }> = {
@@ -33,6 +34,7 @@ export function SubmitForm({
   existing: ExistingSubmission;
 }) {
   const [state, action, pending] = useActionState<State, FormData>(submitResult, null);
+  const [rx, setRx] = useState(existing?.rx ?? false);
   const isTime = workout.metric_type === "time";
   const metric = METRIC_CONFIG[workout.metric_type];
 
@@ -43,6 +45,7 @@ export function SubmitForm({
     <form action={action} className="space-y-5">
       <input type="hidden" name="group_id" value={groupId} />
       <input type="hidden" name="workout_id" value={workout.id} />
+      <input type="hidden" name="rx" value={rx ? "true" : "false"} />
 
       <div className="rounded-lg border border-zinc-200 p-4 space-y-1">
         <p className="font-medium">{workout.title}</p>
@@ -107,6 +110,27 @@ export function SubmitForm({
           />
         </div>
       )}
+
+      <div className="space-y-1.5">
+        <p className="text-sm font-medium">Rx</p>
+        <button
+          type="button"
+          onClick={() => setRx((v) => !v)}
+          aria-pressed={rx}
+          className={`rounded-md border px-4 py-2 text-sm font-semibold transition-colors ${
+            rx
+              ? "border-green-600 bg-green-600 text-white"
+              : "border-zinc-300 bg-white text-zinc-500 hover:border-zinc-400 dark:bg-zinc-900 dark:border-zinc-600 dark:text-zinc-400"
+          }`}
+        >
+          Rx
+        </button>
+        <p className="text-xs text-zinc-400">
+          {rx
+            ? "Marked as Rx — you did the workout as prescribed"
+            : "Not Rx — tap to mark as prescribed"}
+        </p>
+      </div>
 
       <div className="space-y-1">
         <label htmlFor="notes" className="text-sm font-medium">

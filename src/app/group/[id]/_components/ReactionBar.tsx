@@ -38,7 +38,7 @@ export function ReactionBar({
   }
 
   return (
-    <div className="flex gap-1 flex-wrap">
+    <div className="group flex gap-1 flex-wrap">
       {EMOJIS.map((emoji) => {
         const count = optimisticReactions.filter((r) => r.emoji === emoji).length;
         const reacted = optimisticReactions.some(
@@ -49,10 +49,10 @@ export function ReactionBar({
             key={emoji}
             onClick={() => handleClick(emoji)}
             disabled={isPending}
-            className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs transition-colors ${
+            className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs transition-opacity duration-150 ${
               reacted
                 ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
+                : "md:opacity-0 md:group-hover:opacity-100 md:pointer-events-none md:group-hover:pointer-events-auto bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
             }`}
           >
             <span>{emoji}</span>

@@ -33,7 +33,7 @@ export default async function SubmitPage({ params }: { params: Promise<{ id: str
 
   const { data: existing } = await supabase
     .from("submissions")
-    .select("value, notes")
+    .select("value, notes, rx")
     .eq("workout_id", workout.id)
     .eq("user_id", user.id)
     .maybeSingle();

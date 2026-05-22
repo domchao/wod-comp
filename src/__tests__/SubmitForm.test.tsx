@@ -36,7 +36,7 @@ describe("SubmitForm", () => {
         <SubmitForm
           groupId={GROUP_ID}
           workout={timeWorkout}
-          existing={{ value: 150, notes: null }}
+          existing={{ value: 150, notes: null, rx: false }}
         />
       );
       expect(screen.getByLabelText("Minutes")).toHaveValue(2);
@@ -49,7 +49,7 @@ describe("SubmitForm", () => {
         <SubmitForm
           groupId={GROUP_ID}
           workout={timeWorkout}
-          existing={{ value: 45, notes: null }}
+          existing={{ value: 45, notes: null, rx: false }}
         />
       );
       expect(screen.getByLabelText("Minutes")).toHaveValue(0);
@@ -74,7 +74,7 @@ describe("SubmitForm", () => {
         <SubmitForm
           groupId={GROUP_ID}
           workout={repsWorkout}
-          existing={{ value: 42, notes: null }}
+          existing={{ value: 42, notes: null, rx: false }}
         />
       );
       expect(screen.getByLabelText("Reps completed")).toHaveValue(42);
@@ -92,7 +92,7 @@ describe("SubmitForm", () => {
         <SubmitForm
           groupId={GROUP_ID}
           workout={repsWorkout}
-          existing={{ value: 42, notes: null }}
+          existing={{ value: 42, notes: null, rx: false }}
         />
       );
       expect(screen.getByRole("button", { name: "Update result" })).toBeInTheDocument();
@@ -105,7 +105,7 @@ describe("SubmitForm", () => {
         <SubmitForm
           groupId={GROUP_ID}
           workout={repsWorkout}
-          existing={{ value: 42, notes: "scaled" }}
+          existing={{ value: 42, notes: "scaled", rx: false }}
         />
       );
       expect(screen.getByLabelText(/Notes/)).toHaveValue("scaled");
