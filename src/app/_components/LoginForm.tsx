@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { authWithEmail, signInWithGoogle } from "@/app/auth/actions";
+import { authWithEmail } from "@/app/auth/actions";
 
 type State = { error: string } | null;
 
@@ -52,25 +52,6 @@ export function LoginForm({ next }: { next?: string }) {
           className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
         >
           {pending ? "..." : mode === "signin" ? "Sign in" : "Sign up"}
-        </button>
-      </form>
-
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-zinc-200" />
-        </div>
-        <div className="relative flex justify-center text-xs text-zinc-500">
-          <span className="bg-white px-2">or</span>
-        </div>
-      </div>
-
-      <form action={signInWithGoogle}>
-        {next && <input type="hidden" name="next" value={next} />}
-        <button
-          type="submit"
-          className="w-full rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
-        >
-          Continue with Google
         </button>
       </form>
 
