@@ -49,7 +49,7 @@ export default async function GroupPage({
       .single(),
     supabase
       .from("workouts")
-      .select("id, title, description, metric_type")
+      .select("id, title, description, metric_type, photo_url")
       .eq("group_id", id)
       .eq("week_start_date", effectiveWeek)
       .maybeSingle(),
@@ -157,6 +157,13 @@ export default async function GroupPage({
         {currentWorkout ? (
           <div className="rounded-lg border border-zinc-200 p-4 space-y-2">
             <p className="font-medium">{currentWorkout.title}</p>
+            {currentWorkout.photo_url && (
+              <img
+                src={currentWorkout.photo_url}
+                alt="Workout"
+                className="rounded-md w-full object-contain max-h-64 bg-zinc-50"
+              />
+            )}
             {currentWorkout.description && (
               <p className="text-sm text-zinc-500">{currentWorkout.description}</p>
             )}
