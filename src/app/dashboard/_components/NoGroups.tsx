@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { createGroup, joinGroup } from "@/app/groups/actions";
+import { signOut } from "@/app/auth/actions";
 
 type State = { error: string } | null;
 
@@ -15,7 +16,14 @@ export function NoGroups() {
   return (
     <main className="flex flex-1 items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-8">
-        <h1 className="text-center text-2xl font-bold">Get started</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Get started</h1>
+          <form action={signOut}>
+            <button type="submit" className="text-sm text-zinc-500 underline hover:text-zinc-900">
+              Sign out
+            </button>
+          </form>
+        </div>
 
         <div className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
