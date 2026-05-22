@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { signOut } from "@/app/auth/actions";
 import { NoGroups } from "./_components/NoGroups";
 
 export default async function Dashboard() {
@@ -27,7 +28,14 @@ export default async function Dashboard() {
   // Multiple groups — show a list
   return (
     <main className="mx-auto max-w-lg p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Your groups</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Your groups</h1>
+        <form action={signOut}>
+          <button type="submit" className="text-sm text-zinc-500 underline hover:text-zinc-900">
+            Sign out
+          </button>
+        </form>
+      </div>
       <ul className="space-y-2">
         {memberships.map((m) => {
           const group = m.groups as unknown as { id: string; name: string } | null;
