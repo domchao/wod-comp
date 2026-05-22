@@ -6,6 +6,7 @@ import { formatWeekStart, getWeekSetter } from "@/lib/rotation";
 import { sortSubmissions, formatValue } from "@/lib/submissions";
 import { CommentThread } from "./_components/CommentThread";
 import { ReactionBar } from "./_components/ReactionBar";
+import { WeekNav } from "./_components/WeekNav";
 import Link from "next/link";
 
 const METRIC_LABELS: Record<string, string> = {
@@ -15,7 +16,13 @@ const METRIC_LABELS: Record<string, string> = {
   rounds: "AMRAP",
 };
 
-export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function GroupPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const { id } = await params;
   const supabase = await createClient();
   const {
@@ -24,7 +31,14 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
   if (!user) redirect("/");
 
-  const [{ data: group }, { data: currentWorkout }] = await Promise.all([
+  const todayWeekStr = formatWeekStart();
+  const rawWeek = (await searchParams).week;
+  const requestedWeek = typeof rawWeek === "string" ? rawWeek : todayWeekStr;
+  // Clamp to current week — don't allow viewing future weeks
+  const effectiveWeek = requestedWeek > todayWeekStr ? todayWeekStr : requestedWeek;
+  const isCurrentWeek = effectiveWeek === todayWeekStr;
+
+  const [{ data: group }, { data: currentWorkout }, { data: allWorkoutWeeks }] = await Promise.all([
     supabase
       .from("groups")
       .select(
@@ -37,11 +51,20 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       .from("workouts")
       .select("id, title, description, metric_type")
       .eq("group_id", id)
-      .eq("week_start_date", formatWeekStart())
+      .eq("week_start_date", effectiveWeek)
       .maybeSingle(),
+    supabase
+      .from("workouts")
+      .select("week_start_date")
+      .eq("group_id", id)
+      .order("week_start_date", { ascending: true }),
   ]);
 
   if (!group) redirect("/dashboard");
+
+  const sortedWeeks = (allWorkoutWeeks ?? []).map((w) => w.week_start_date).sort();
+  const prevWeek = sortedWeeks.filter((w) => w < effectiveWeek).at(-1) ?? null;
+  const nextWeek = sortedWeeks.filter((w) => w > effectiveWeek && w <= todayWeekStr)[0] ?? null;
 
   const [{ data: submissions }, { data: comments }, { data: reactionRows }] = currentWorkout
     ? await Promise.all([
@@ -68,8 +91,10 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     }[]
   ).sort((a, b) => new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime());
 
+  const [effY, effM, effD] = effectiveWeek.split("-").map(Number);
   const setterId = getWeekSetter(
-    members.map((m) => ({ id: m.profiles.id, joined_at: m.joined_at }))
+    members.map((m) => ({ id: m.profiles.id, joined_at: m.joined_at })),
+    new Date(effY, effM - 1, effD)
   );
   const setter = members.find((m) => m.profiles.id === setterId);
   const isAdmin = group.admin_user_id === user.id;
@@ -115,12 +140,20 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">This week</h2>
-        <p className="text-sm text-zinc-500">
-          {isMyTurn
-            ? "Your turn to set the workout"
-            : `${setter?.profiles.name}'s turn to set the workout`}
-        </p>
+        <WeekNav
+          groupId={id}
+          weekStr={effectiveWeek}
+          prevWeek={prevWeek}
+          nextWeek={nextWeek}
+          isCurrentWeek={isCurrentWeek}
+        />
+        {isCurrentWeek && (
+          <p className="text-sm text-zinc-500">
+            {isMyTurn
+              ? "Your turn to set the workout"
+              : `${setter?.profiles.name}'s turn to set the workout`}
+          </p>
+        )}
         {currentWorkout ? (
           <div className="rounded-lg border border-zinc-200 p-4 space-y-2">
             <p className="font-medium">{currentWorkout.title}</p>
@@ -128,44 +161,50 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               <p className="text-sm text-zinc-500">{currentWorkout.description}</p>
             )}
             <p className="text-xs text-zinc-400">{METRIC_LABELS[currentWorkout.metric_type]}</p>
-            <div className="flex gap-3 pt-1 flex-wrap">
-              <Link
-                href={`/group/${id}/submit`}
-                className="inline-block rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-              >
-                {mySubmission ? "Update your result" : "Log your result →"}
-              </Link>
-              {isAdmin && (
-                <>
-                  <Link
-                    href={`/group/${id}/workout/${currentWorkout.id}/edit`}
-                    className="text-xs text-zinc-500 underline hover:text-zinc-900"
-                  >
-                    Edit
-                  </Link>
-                  <form action={deleteWorkout}>
-                    <input type="hidden" name="workout_id" value={currentWorkout.id} />
-                    <input type="hidden" name="group_id" value={id} />
-                    <button
-                      type="submit"
-                      className="text-xs text-red-500 underline hover:text-red-700"
+            {isCurrentWeek && (
+              <div className="flex gap-3 pt-1 flex-wrap">
+                <Link
+                  href={`/group/${id}/submit`}
+                  className="inline-block rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                >
+                  {mySubmission ? "Update your result" : "Log your result →"}
+                </Link>
+                {isAdmin && (
+                  <>
+                    <Link
+                      href={`/group/${id}/workout/${currentWorkout.id}/edit`}
+                      className="text-xs text-zinc-500 underline hover:text-zinc-900"
                     >
-                      Delete
-                    </button>
-                  </form>
-                </>
-              )}
-            </div>
+                      Edit
+                    </Link>
+                    <form action={deleteWorkout}>
+                      <input type="hidden" name="workout_id" value={currentWorkout.id} />
+                      <input type="hidden" name="group_id" value={id} />
+                      <button
+                        type="submit"
+                        className="text-xs text-red-500 underline hover:text-red-700"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-        ) : canPost ? (
-          <Link
-            href={`/group/${id}/workout/new`}
-            className="inline-block rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-          >
-            Post this week&apos;s workout →
-          </Link>
+        ) : isCurrentWeek ? (
+          canPost ? (
+            <Link
+              href={`/group/${id}/workout/new`}
+              className="inline-block rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+            >
+              Post this week&apos;s workout →
+            </Link>
+          ) : (
+            <p className="text-sm text-zinc-400">Waiting for workout to be posted...</p>
+          )
         ) : (
-          <p className="text-sm text-zinc-400">Waiting for workout to be posted...</p>
+          <p className="text-sm text-zinc-400">No workout was posted this week.</p>
         )}
       </div>
 
@@ -237,7 +276,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
                 {member.profiles.name}
               </span>
               <span className="text-xs text-zinc-400">
-                {member.profiles.id === setterId && "setting this week"}
+                {member.profiles.id === setterId &&
+                  (isCurrentWeek ? "setting this week" : "set this week")}
                 {member.profiles.id === group.admin_user_id &&
                   member.profiles.id !== setterId &&
                   "admin"}
