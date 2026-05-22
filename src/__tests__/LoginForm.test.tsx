@@ -20,6 +20,20 @@ describe("LoginForm", () => {
     expect(screen.getByRole("button", { name: /Continue with Google/i })).toBeInTheDocument();
   });
 
+  it("includes a hidden next field in both forms when next prop is provided", () => {
+    render(<LoginForm next="/invite/abc123" />);
+    const hiddenInputs = document.querySelectorAll<HTMLInputElement>(
+      "input[type='hidden'][name='next']"
+    );
+    expect(hiddenInputs).toHaveLength(2);
+    hiddenInputs.forEach((input) => expect(input.value).toBe("/invite/abc123"));
+  });
+
+  it("does not render a next field when next prop is omitted", () => {
+    render(<LoginForm />);
+    expect(document.querySelector("input[name='next']")).toBeNull();
+  });
+
   describe("sign in mode (default)", () => {
     it("shows a Sign in submit button", () => {
       render(<LoginForm />);
