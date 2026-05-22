@@ -11,7 +11,13 @@ export async function authWithEmail(_prevState: unknown, formData: FormData) {
   const supabase = await createClient();
 
   if (mode === "signup") {
-    const { error } = await supabase.auth.signUp({ email, password });
+    const displayName = (formData.get("display_name") as string | null)?.trim();
+    if (!displayName) return { error: "Display name is required." };
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name: displayName } },
+    });
     if (error) return { error: error.message };
   } else {
     const { error } = await supabase.auth.signInWithPassword({ email, password });

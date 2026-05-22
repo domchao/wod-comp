@@ -14,6 +14,11 @@ describe("LoginForm", () => {
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
   });
 
+  it("does not show the display name field in sign in mode", () => {
+    render(<LoginForm />);
+    expect(screen.queryByLabelText("Display name")).toBeNull();
+  });
+
   it("includes a hidden next field when next prop is provided", () => {
     render(<LoginForm next="/invite/abc123" />);
     const hiddenInput = document.querySelector<HTMLInputElement>(
@@ -50,6 +55,25 @@ describe("LoginForm", () => {
 
       expect(screen.getByRole("button", { name: "Sign up" })).toBeInTheDocument();
       expect(screen.getByText(/Already have an account/i)).toBeInTheDocument();
+    });
+
+    it("shows the display name field in sign up mode", async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      await user.click(screen.getByRole("button", { name: "Sign up" }));
+
+      expect(screen.getByLabelText("Display name")).toBeInTheDocument();
+    });
+
+    it("hides the display name field after switching back to sign in", async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      await user.click(screen.getByRole("button", { name: "Sign up" }));
+      await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+      expect(screen.queryByLabelText("Display name")).toBeNull();
     });
 
     it("switches back to sign in mode when the toggle is clicked again", async () => {
