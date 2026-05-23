@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { HeaderMenu } from "./_components/HeaderMenu";
+import { GroupNameEditor } from "./_components/GroupNameEditor";
 import { deleteWorkout } from "./workout/actions";
 import { formatWeekStart, getWeekSetter } from "@/lib/rotation";
 import { sortSubmissions, formatValue } from "@/lib/submissions";
@@ -139,7 +140,7 @@ export default async function GroupPage({
   return (
     <main className="mx-auto max-w-lg p-6 space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{group.name}</h1>
+        <GroupNameEditor groupId={id} name={group.name} isAdmin={isAdmin} />
         <HeaderMenu groupId={id} />
       </div>
 

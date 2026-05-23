@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 
 export async function createGroup(_prevState: unknown, formData: FormData) {
@@ -31,6 +32,36 @@ export async function createGroup(_prevState: unknown, formData: FormData) {
   if (memberError) return { error: memberError.message };
 
   redirect(`/group/${groupId}`);
+}
+
+export async function renameGroup(_prevState: unknown, formData: FormData) {
+  const name = (formData.get("name") as string)?.trim();
+  const groupId = formData.get("group_id") as string;
+
+  if (!name) return { error: "Group name is required" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in." };
+
+  const { data: group } = await supabase
+    .from("groups")
+    .select("admin_user_id")
+    .eq("id", groupId)
+    .single();
+
+  if (!group) return { error: "Group not found" };
+  if (group.admin_user_id !== user.id)
+    return { error: "Only the group admin can rename the group" };
+
+  const { error } = await supabase.from("groups").update({ name }).eq("id", groupId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/group/${groupId}`);
+  revalidatePath("/dashboard");
+  return { success: true } as const;
 }
 
 export async function joinGroup(_prevState: unknown, formData: FormData) {

@@ -36,6 +36,7 @@ describe("HeaderMenu", () => {
 
     it("hides the dropdown by default", () => {
       render(<HeaderMenu groupId={GROUP_ID} />);
+      expect(screen.queryByRole("link", { name: /all groups/i })).toBeNull();
       expect(screen.queryByRole("link", { name: /my stats/i })).toBeNull();
       expect(screen.queryByRole("link", { name: /edit profile/i })).toBeNull();
       expect(screen.queryByRole("button", { name: /sign out/i })).toBeNull();
@@ -47,9 +48,20 @@ describe("HeaderMenu", () => {
       const user = userEvent.setup();
       render(<HeaderMenu groupId={GROUP_ID} />);
       await user.click(screen.getByRole("button", { name: /menu/i }));
+      expect(screen.getByRole("link", { name: /all groups/i })).toBeInTheDocument();
       expect(screen.getByRole("link", { name: /my stats/i })).toBeInTheDocument();
       expect(screen.getByRole("link", { name: /edit profile/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
+    });
+
+    it("all groups link points to /dashboard", async () => {
+      const user = userEvent.setup();
+      render(<HeaderMenu groupId={GROUP_ID} />);
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      expect(screen.getByRole("link", { name: /all groups/i })).toHaveAttribute(
+        "href",
+        "/dashboard"
+      );
     });
 
     it("my stats link points to the correct route", async () => {
@@ -80,6 +92,14 @@ describe("HeaderMenu", () => {
       await user.click(screen.getByRole("button", { name: /menu/i }));
       await user.click(screen.getByRole("button", { name: /menu/i }));
       expect(screen.queryByRole("link", { name: /my stats/i })).toBeNull();
+    });
+
+    it("closes when all groups is clicked", async () => {
+      const user = userEvent.setup();
+      render(<HeaderMenu groupId={GROUP_ID} />);
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      await user.click(screen.getByRole("link", { name: /all groups/i }));
+      expect(screen.queryByRole("link", { name: /all groups/i })).toBeNull();
     });
 
     it("closes when my stats is clicked", async () => {

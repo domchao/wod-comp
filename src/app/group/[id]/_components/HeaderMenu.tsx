@@ -45,6 +45,13 @@ export function HeaderMenu({ groupId }: { groupId: string }) {
       {open && (
         <div className="absolute right-0 top-full mt-1.5 w-40 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg py-1 z-10">
           <Link
+            href="/dashboard"
+            className="block px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            onClick={() => setOpen(false)}
+          >
+            All groups
+          </Link>
+          <Link
             href={`/group/${groupId}/stats`}
             className="block px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
             onClick={() => setOpen(false)}
