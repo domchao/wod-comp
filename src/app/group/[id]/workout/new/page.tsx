@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { createWorkout } from "../actions";
 
@@ -20,10 +20,19 @@ export default function NewWorkoutPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [metricType, setMetricType] = useState<string | null>(null);
+
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
+
+  const [recording, setRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [voiceExtracting, setVoiceExtracting] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -56,6 +65,62 @@ export default function NewWorkoutPage() {
       setExtractError("Could not reach the AI service");
     } finally {
       setExtracting(false);
+    }
+  }
+
+  async function startRecording() {
+    setVoiceError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      chunksRef.current = [];
+      const mr = new MediaRecorder(stream);
+      mediaRecorderRef.current = mr;
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      mr.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mr.mimeType });
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        setAudioBlob(blob);
+        setAudioUrl(URL.createObjectURL(blob));
+      };
+      mr.start();
+      setRecording(true);
+    } catch {
+      setVoiceError("Microphone access denied");
+    }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+  }
+
+  async function handleVoiceExtract() {
+    if (!audioBlob) return;
+    setVoiceExtracting(true);
+    setVoiceError(null);
+    try {
+      const base64 = await blobToBase64(audioBlob);
+      const mimeType = audioBlob.type || "audio/webm";
+      const res = await fetch("/api/extract-workout-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64, mimeType }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setVoiceError(data.error);
+      } else {
+        if (data.title) setTitle(data.title);
+        if (data.description) setDescription(data.description);
+        if (data.metric_type) setMetricType(data.metric_type);
+      }
+    } catch {
+      setVoiceError("Could not reach the AI service");
+    } finally {
+      setVoiceExtracting(false);
     }
   }
 
@@ -112,6 +177,48 @@ export default function NewWorkoutPage() {
               {extractError && <p className="text-sm text-red-600">{extractError}</p>}
             </>
           )}
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-sm font-medium">
+            Voice note <span className="text-zinc-400 font-normal">(optional)</span>
+          </p>
+          <div className="flex gap-2">
+            {!recording ? (
+              <button
+                type="button"
+                onClick={startRecording}
+                disabled={voiceExtracting}
+                className="flex items-center gap-1.5 rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+              >
+                <span className="size-2 rounded-full bg-red-500 inline-block" />
+                {audioBlob ? "Re-record" : "Record"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={stopRecording}
+                className="flex items-center gap-1.5 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
+              >
+                <span className="size-2 rounded-sm bg-red-500 inline-block animate-pulse" />
+                Stop
+              </button>
+            )}
+          </div>
+          {audioUrl && (
+            <>
+              <audio src={audioUrl} controls className="mt-2 w-full h-10" />
+              <button
+                type="button"
+                onClick={handleVoiceExtract}
+                disabled={voiceExtracting}
+                className="mt-2 w-full rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+              >
+                {voiceExtracting ? "Extracting..." : "Extract workout details with AI"}
+              </button>
+            </>
+          )}
+          {voiceError && <p className="text-sm text-red-600">{voiceError}</p>}
         </div>
 
         <div className="space-y-1">
@@ -173,5 +280,14 @@ function fileToBase64(file: File): Promise<string> {
     reader.onload = () => resolve((reader.result as string).split(",")[1]);
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
 }
