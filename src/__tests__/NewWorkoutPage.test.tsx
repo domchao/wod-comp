@@ -27,10 +27,45 @@ class FakeFileReader {
   }
 }
 
+type MediaRecorderEventMap = { dataavailable: { data: Blob }; stop: undefined };
+
+class FakeMediaRecorder {
+  mimeType = "audio/webm";
+  ondataavailable: ((e: { data: Blob }) => void) | null = null;
+  onstop: (() => void) | null = null;
+  start() {
+    queueMicrotask(() =>
+      this.ondataavailable?.({ data: new Blob(["audio"], { type: "audio/webm" }) })
+    );
+  }
+  stop() {
+    queueMicrotask(() => this.onstop?.());
+  }
+  // satisfy TS without a full impl
+  addEventListener<K extends keyof MediaRecorderEventMap>(_: K, __: unknown) {}
+  removeEventListener<K extends keyof MediaRecorderEventMap>(_: K, __: unknown) {}
+}
+
+const mockGetUserMedia = vi.fn();
+
+function setupMediaMocks() {
+  const mockTrack = { stop: vi.fn() };
+  const mockStream = { getTracks: vi.fn().mockReturnValue([mockTrack]) };
+  mockGetUserMedia.mockReset();
+  mockGetUserMedia.mockResolvedValue(mockStream);
+  Object.defineProperty(global.navigator, "mediaDevices", {
+    value: { getUserMedia: mockGetUserMedia },
+    writable: true,
+    configurable: true,
+  });
+  vi.stubGlobal("MediaRecorder", FakeMediaRecorder);
+}
+
 beforeEach(() => {
   URL.createObjectURL = vi.fn().mockReturnValue("blob:mock-preview");
   URL.revokeObjectURL = vi.fn();
   vi.stubGlobal("FileReader", FakeFileReader);
+  setupMediaMocks();
   global.fetch = vi.fn().mockResolvedValue({
     json: vi.fn().mockResolvedValue(EXTRACTED),
   }) as typeof global.fetch;
@@ -103,6 +138,113 @@ describe("NewWorkoutPage — AI extraction", () => {
 
     await waitFor(() =>
       expect(screen.getByText("Could not reach the AI service")).toBeInTheDocument()
+    );
+  });
+});
+
+describe("NewWorkoutPage — voice recording", () => {
+  it("shows a Record button on initial render", () => {
+    render(<NewWorkoutPage />);
+    expect(screen.getByRole("button", { name: /^record$/i })).toBeInTheDocument();
+  });
+
+  it("does not show the voice extract button before recording", () => {
+    render(<NewWorkoutPage />);
+    // There should be no extract button at all before any recording exists
+    expect(screen.queryByRole("button", { name: /extract workout details with ai/i })).toBeNull();
+  });
+
+  it("switches to Stop button while recording", async () => {
+    const user = userEvent.setup();
+    render(<NewWorkoutPage />);
+    await user.click(screen.getByRole("button", { name: /^record$/i }));
+    expect(screen.getByRole("button", { name: /^stop$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^record$/i })).toBeNull();
+  });
+
+  it("shows audio player and extract button after stopping", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<NewWorkoutPage />);
+    await user.click(screen.getByRole("button", { name: /^record$/i }));
+    await user.click(screen.getByRole("button", { name: /^stop$/i }));
+
+    await waitFor(() => expect(container.querySelector("audio")).not.toBeNull());
+    expect(
+      screen.getByRole("button", { name: /extract workout details with ai/i })
+    ).toBeInTheDocument();
+  });
+
+  it("calls /api/extract-workout-voice when the extract button is clicked", async () => {
+    const user = userEvent.setup();
+    render(<NewWorkoutPage />);
+    await user.click(screen.getByRole("button", { name: /^record$/i }));
+    await user.click(screen.getByRole("button", { name: /^stop$/i }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /extract workout details with ai/i })
+      ).toBeInTheDocument()
+    );
+    await user.click(screen.getByRole("button", { name: /extract workout details with ai/i }));
+
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/extract-workout-voice",
+        expect.objectContaining({ method: "POST" })
+      )
+    );
+  });
+
+  it("populates title, description and metric_type from the voice API response", async () => {
+    const user = userEvent.setup();
+    render(<NewWorkoutPage />);
+    await user.click(screen.getByRole("button", { name: /^record$/i }));
+    await user.click(screen.getByRole("button", { name: /^stop$/i }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /extract workout details with ai/i })
+      ).toBeInTheDocument()
+    );
+    await user.click(screen.getByRole("button", { name: /extract workout details with ai/i }));
+
+    await waitFor(() => expect(screen.getByDisplayValue("Fran")).toBeInTheDocument());
+    expect(screen.getByDisplayValue("21-15-9 Thrusters and Pull-ups")).toBeInTheDocument();
+    const timeRadio = screen
+      .getAllByRole("radio")
+      .find((el) => (el as HTMLInputElement).value === "time");
+    expect(timeRadio).toBeChecked();
+  });
+
+  it("shows an error when microphone access is denied", async () => {
+    mockGetUserMedia.mockRejectedValue(new Error("Permission denied"));
+
+    const user = userEvent.setup();
+    render(<NewWorkoutPage />);
+    await user.click(screen.getByRole("button", { name: /^record$/i }));
+
+    await waitFor(() => expect(screen.getByText("Microphone access denied")).toBeInTheDocument());
+  });
+
+  it("shows an error when the voice extract API returns an error field", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: vi.fn().mockResolvedValue({ error: "Failed to parse AI response" }),
+    }) as typeof global.fetch;
+
+    const user = userEvent.setup();
+    render(<NewWorkoutPage />);
+    await user.click(screen.getByRole("button", { name: /^record$/i }));
+    await user.click(screen.getByRole("button", { name: /^stop$/i }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /extract workout details with ai/i })
+      ).toBeInTheDocument()
+    );
+    await user.click(screen.getByRole("button", { name: /extract workout details with ai/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Failed to parse AI response")).toBeInTheDocument()
     );
   });
 });
