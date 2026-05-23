@@ -39,7 +39,7 @@ export function GroupNameEditor({
     startTransition(async () => {
       const result = await renameGroup(null, formData);
       if (result && "error" in result) {
-        setError(result.error);
+        setError(result.error ?? null);
       } else {
         if (newName) setDisplayName(newName);
         setEditing(false);

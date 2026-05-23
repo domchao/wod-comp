@@ -21,7 +21,7 @@ export function ProfileForm({ currentName }: { currentName: string }) {
     startTransition(async () => {
       const result = await updateDisplayName(null, formData);
       if (result && "error" in result) {
-        setError(result.error);
+        setError(result.error ?? null);
       } else {
         const newName = (formData.get("name") as string)?.trim();
         if (newName) setNameValue(newName);
