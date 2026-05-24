@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { signOut } from "@/app/auth/actions";
+import { deleteGroup } from "@/app/groups/actions";
 
-export function HeaderMenu({ groupId }: { groupId: string }) {
+export function HeaderMenu({ groupId, isAdmin }: { groupId: string; isAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -13,6 +17,7 @@ export function HeaderMenu({ groupId }: { groupId: string }) {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
+        setConfirmDelete(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -43,7 +48,7 @@ export function HeaderMenu({ groupId }: { groupId: string }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-40 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg py-1 z-10">
+        <div className="absolute right-0 top-full mt-1.5 w-48 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg py-1 z-10">
           <Link
             href="/dashboard"
             className="block px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
@@ -73,6 +78,50 @@ export function HeaderMenu({ groupId }: { groupId: string }) {
               Sign out
             </button>
           </form>
+          {isAdmin && (
+            <>
+              <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
+              {confirmDelete ? (
+                <div className="px-4 py-2 space-y-2">
+                  <p className="text-xs text-zinc-500">Delete this group and all its data?</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => {
+                        const formData = new FormData();
+                        formData.set("group_id", groupId);
+                        startTransition(async () => {
+                          const result = await deleteGroup(null, formData);
+                          if (result && "error" in result) setDeleteError(result.error ?? null);
+                        });
+                      }}
+                      className="text-xs font-medium text-red-600 hover:text-red-800 disabled:opacity-50"
+                    >
+                      {isPending ? "Deleting..." : "Yes, delete"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => setConfirmDelete(false)}
+                      className="text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {deleteError && <p className="text-xs text-red-600">{deleteError}</p>}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                >
+                  Delete group
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>
