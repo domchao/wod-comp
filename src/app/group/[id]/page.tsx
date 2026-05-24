@@ -141,7 +141,7 @@ export default async function GroupPage({
     <main className="mx-auto max-w-lg p-6 space-y-8">
       <div className="flex items-center justify-between">
         <GroupNameEditor groupId={id} name={group.name} isAdmin={isAdmin} />
-        <HeaderMenu groupId={id} />
+        <HeaderMenu groupId={id} isAdmin={isAdmin} />
       </div>
 
       <div className="space-y-3">

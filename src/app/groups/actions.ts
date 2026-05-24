@@ -64,6 +64,33 @@ export async function renameGroup(_prevState: unknown, formData: FormData) {
   return { success: true } as const;
 }
 
+export async function deleteGroup(_prevState: unknown, formData: FormData) {
+  const groupId = formData.get("group_id") as string;
+  if (!groupId) return { error: "Group ID is required" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in." };
+
+  const { data: group } = await supabase
+    .from("groups")
+    .select("admin_user_id")
+    .eq("id", groupId)
+    .single();
+
+  if (!group) return { error: "Group not found" };
+  if (group.admin_user_id !== user.id)
+    return { error: "Only the group admin can delete the group" };
+
+  const { error } = await supabase.from("groups").delete().eq("id", groupId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard");
+  redirect("/dashboard");
+}
+
 export async function joinGroup(_prevState: unknown, formData: FormData) {
   const inviteCode = (formData.get("invite_code") as string)?.trim().toLowerCase();
   if (!inviteCode) return { error: "Invite code is required" };
