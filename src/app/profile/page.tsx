@@ -20,7 +20,7 @@ export default async function ProfilePage() {
   if (!profile) redirect("/");
 
   return (
-    <main className="mx-auto max-w-lg p-6 space-y-6">
+    <main className="mx-auto max-w-lg px-4 py-6 sm:px-6 space-y-6">
       <div className="flex items-center gap-3">
         <Link
           href="/dashboard"

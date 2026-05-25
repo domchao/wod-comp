@@ -17,7 +17,7 @@ export function GroupsDashboard({ groups }: { groups: Group[] }) {
   const [joinState, joinAction, joinPending] = useActionState<State, FormData>(joinGroup, null);
 
   return (
-    <main className="mx-auto max-w-lg p-6 space-y-8">
+    <main className="mx-auto max-w-lg px-4 py-6 sm:px-6 space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Your groups</h1>
         <form action={signOut}>
@@ -68,7 +68,7 @@ export function GroupsDashboard({ groups }: { groups: Group[] }) {
           <div className="w-full border-t border-zinc-200" />
         </div>
         <div className="relative flex justify-center text-xs text-zinc-500">
-          <span className="bg-white px-2">or</span>
+          <span className="bg-background px-2">or</span>
         </div>
       </div>
 

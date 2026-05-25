@@ -125,7 +125,7 @@ export default function NewWorkoutPage() {
   }
 
   return (
-    <main className="mx-auto max-w-lg p-6 space-y-6">
+    <main className="mx-auto max-w-lg px-4 py-6 sm:px-6 space-y-6">
       <h1 className="text-2xl font-bold">Post this week&apos;s workout</h1>
 
       <form action={action} className="space-y-5">

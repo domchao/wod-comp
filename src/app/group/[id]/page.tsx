@@ -138,7 +138,7 @@ export default async function GroupPage({
   const typedComments = (comments ?? []) as unknown as Comment[];
 
   return (
-    <main className="mx-auto max-w-lg p-6 space-y-8">
+    <main className="mx-auto max-w-lg px-4 py-6 sm:px-6 space-y-8">
       <div className="flex items-center justify-between">
         <GroupNameEditor groupId={id} name={group.name} isAdmin={isAdmin} />
         <HeaderMenu groupId={id} isAdmin={isAdmin} />
