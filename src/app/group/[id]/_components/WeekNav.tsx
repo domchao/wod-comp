@@ -29,13 +29,13 @@ export function WeekNav({
       {prevWeek ? (
         <Link
           href={`/group/${groupId}?week=${prevWeek}`}
-          className="px-1 text-zinc-500 hover:text-zinc-900"
+          className="p-2 text-zinc-500 hover:text-zinc-900"
           aria-label="Previous week"
         >
           ←
         </Link>
       ) : (
-        <span className="px-1 text-zinc-300" aria-hidden="true">
+        <span className="p-2 text-zinc-300" aria-hidden="true">
           ←
         </span>
       )}
@@ -43,13 +43,13 @@ export function WeekNav({
       {nextWeek ? (
         <Link
           href={`/group/${groupId}?week=${nextWeek}`}
-          className="px-1 text-zinc-500 hover:text-zinc-900"
+          className="p-2 text-zinc-500 hover:text-zinc-900"
           aria-label="Next week"
         >
           →
         </Link>
       ) : (
-        <span className="px-1 text-zinc-300" aria-hidden="true">
+        <span className="p-2 text-zinc-300" aria-hidden="true">
           →
         </span>
       )}

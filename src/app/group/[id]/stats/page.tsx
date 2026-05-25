@@ -61,7 +61,7 @@ export default async function StatsPage({ params }: { params: Promise<{ id: stri
   const podiums = weeklyResults.filter((r) => r.rank <= 3).length;
 
   return (
-    <main className="mx-auto max-w-lg p-6 space-y-8">
+    <main className="mx-auto max-w-lg px-4 py-6 sm:px-6 space-y-8">
       <div>
         <Link
           href={`/group/${id}`}

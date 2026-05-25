@@ -49,7 +49,7 @@ export function ReactionBar({
             key={emoji}
             onClick={() => handleClick(emoji)}
             disabled={isPending}
-            className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs transition-opacity duration-150 ${
+            className={`flex items-center gap-0.5 rounded-full px-2 py-1 md:py-0.5 text-xs transition-opacity duration-150 ${
               reacted
                 ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                 : "md:opacity-0 md:group-hover:opacity-100 md:pointer-events-none md:group-hover:pointer-events-auto bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
