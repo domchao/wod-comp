@@ -3,13 +3,14 @@
 import { useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { addComment, deleteComment } from "../comments/actions";
+import { Avatar } from "@/app/_components/Avatar";
 
 type Comment = {
   id: string;
   user_id: string;
   body: string;
   created_at: string;
-  profiles: { name: string };
+  profiles: { name: string; avatar_url: string | null };
 };
 
 type State = { error: string } | { success: true } | null;
@@ -54,6 +55,7 @@ export function CommentThread({
         <ul className="space-y-3">
           {comments.map((comment) => (
             <li key={comment.id} className="flex gap-2 text-sm">
+              <Avatar src={comment.profiles.avatar_url} name={comment.profiles.name} size="sm" />
               <div className="flex-1 space-y-0.5">
                 <div className="flex items-baseline gap-2">
                   <span className="font-medium text-xs">{comment.profiles.name}</span>
