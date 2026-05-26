@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateDisplayName, uploadProfilePicture } from "./actions";
+import { updateDisplayName, uploadProfilePicture, deleteProfilePicture } from "./actions";
 import { Avatar } from "@/app/_components/Avatar";
 
 export function ProfileForm({
@@ -19,10 +19,13 @@ export function ProfileForm({
   const [nameSuccess, setNameSuccess] = useState(false);
   const [isNamePending, startNameTransition] = useTransition();
 
+  // savedAvatarUrl tracks what's persisted in the DB — drives the Remove button visibility
+  const [savedAvatarUrl, setSavedAvatarUrl] = useState<string | null>(currentAvatarUrl);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentAvatarUrl);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [avatarSuccess, setAvatarSuccess] = useState(false);
   const [isAvatarPending, startAvatarTransition] = useTransition();
+  const [isDeletePending, startDeleteTransition] = useTransition();
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -60,12 +63,31 @@ export function ProfileForm({
       const result = await uploadProfilePicture(null, formData);
       if (result && "error" in result) {
         setAvatarError(result.error ?? null);
-      } else {
+      } else if ("avatarUrl" in result) {
+        setSavedAvatarUrl(result.avatarUrl);
+        setPreviewUrl(result.avatarUrl);
         setAvatarSuccess(true);
         router.refresh();
       }
     });
   }
+
+  function handleDelete() {
+    setAvatarError(null);
+    setAvatarSuccess(false);
+    startDeleteTransition(async () => {
+      const result = await deleteProfilePicture();
+      if (result && "error" in result) {
+        setAvatarError(result.error ?? null);
+      } else {
+        setSavedAvatarUrl(null);
+        setPreviewUrl(null);
+        router.refresh();
+      }
+    });
+  }
+
+  const isAnyAvatarPending = isAvatarPending || isDeletePending;
 
   return (
     <div className="space-y-8">
@@ -90,13 +112,25 @@ export function ProfileForm({
         {avatarError && <p className="text-sm text-red-600">{avatarError}</p>}
         {avatarSuccess && <p className="text-sm text-green-600">Profile picture updated.</p>}
 
-        <button
-          type="submit"
-          disabled={isAvatarPending}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-        >
-          {isAvatarPending ? "Uploading..." : "Upload picture"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={isAnyAvatarPending}
+            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            {isAvatarPending ? "Uploading..." : "Upload picture"}
+          </button>
+          {savedAvatarUrl && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isAnyAvatarPending}
+              className="text-sm text-red-500 hover:text-red-700 disabled:opacity-50"
+            >
+              {isDeletePending ? "Removing..." : "Remove picture"}
+            </button>
+          )}
+        </div>
       </form>
 
       <form onSubmit={handleNameSubmit} className="space-y-4">

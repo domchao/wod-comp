@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { uploadProfilePicture } from "@/app/profile/actions";
+import { uploadProfilePicture, deleteProfilePicture } from "@/app/profile/actions";
 
 vi.mock("@/lib/supabase/server");
 vi.mock("next/cache");
@@ -135,5 +135,50 @@ describe("uploadProfilePicture", () => {
 
     const storageMock = mock.storage.from();
     expect(storageMock.remove).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteProfilePicture", () => {
+  const EXISTING_URL =
+    "https://cdn.example.com/storage/v1/object/public/profile-pictures/user-1/avatar.jpg";
+
+  it("returns success, clears avatar_url, and removes the file from storage", async () => {
+    const mock = buildSupabaseMock({ existingAvatarUrl: EXISTING_URL });
+    vi.mocked(createClient).mockResolvedValue(mock as never);
+
+    const result = await deleteProfilePicture();
+    expect(result).toEqual({ success: true });
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith("/", "layout");
+    expect(mock.storage.from().remove).toHaveBeenCalledWith(["user-1/avatar.jpg"]);
+  });
+
+  it("returns an error when there is no profile picture to remove", async () => {
+    vi.mocked(createClient).mockResolvedValue(
+      buildSupabaseMock({ existingAvatarUrl: null }) as never
+    );
+    const result = await deleteProfilePicture();
+    expect(result).toEqual({ error: "No profile picture to remove." });
+    expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
+  });
+
+  it("returns an error when the profile update fails", async () => {
+    vi.mocked(createClient).mockResolvedValue(
+      buildSupabaseMock({
+        existingAvatarUrl: EXISTING_URL,
+        updateError: "permission denied",
+      }) as never
+    );
+    const result = await deleteProfilePicture();
+    expect(result).toEqual({ error: "permission denied" });
+    expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
+  });
+
+  it("does not call storage remove when the URL is unrecognised", async () => {
+    const mock = buildSupabaseMock({ existingAvatarUrl: "https://other.cdn.com/image.jpg" });
+    vi.mocked(createClient).mockResolvedValue(mock as never);
+
+    await deleteProfilePicture();
+
+    expect(mock.storage.from().remove).not.toHaveBeenCalled();
   });
 });

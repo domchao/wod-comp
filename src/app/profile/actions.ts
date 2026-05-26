@@ -73,3 +73,34 @@ export async function uploadProfilePicture(_prevState: unknown, formData: FormDa
   revalidatePath("/", "layout");
   return { success: true, avatarUrl: publicUrl } as const;
 }
+
+export async function deleteProfilePicture() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("avatar_url")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.avatar_url) return { error: "No profile picture to remove." };
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ avatar_url: null })
+    .eq("id", user.id);
+
+  if (updateError) return { error: updateError.message };
+
+  const oldPath = storagePathFromUrl(profile.avatar_url);
+  if (oldPath) {
+    await supabase.storage.from("profile-pictures").remove([oldPath]);
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true } as const;
+}
