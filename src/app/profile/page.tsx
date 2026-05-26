@@ -13,7 +13,7 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("name")
+    .select("name, avatar_url")
     .eq("id", user.id)
     .single();
 
@@ -30,7 +30,7 @@ export default async function ProfilePage() {
         </Link>
         <h1 className="text-2xl font-bold">Edit profile</h1>
       </div>
-      <ProfileForm currentName={profile.name} />
+      <ProfileForm currentName={profile.name} currentAvatarUrl={profile.avatar_url ?? null} />
     </main>
   );
 }

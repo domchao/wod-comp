@@ -10,6 +10,7 @@ import { ReactionBar } from "./_components/ReactionBar";
 import { WeekNav } from "./_components/WeekNav";
 import Link from "next/link";
 import { InviteSection } from "./_components/InviteSection";
+import { Avatar } from "@/app/_components/Avatar";
 
 const METRIC_LABELS: Record<string, string> = {
   time: "For time",
@@ -45,7 +46,7 @@ export default async function GroupPage({
       .from("groups")
       .select(
         `id, name, invite_code, admin_user_id,
-         group_members(joined_at, profiles(id, name))`
+         group_members(joined_at, profiles(id, name, avatar_url))`
       )
       .eq("id", id)
       .single(),
@@ -72,11 +73,13 @@ export default async function GroupPage({
     ? await Promise.all([
         supabase
           .from("submissions")
-          .select("id, user_id, value, notes, rx, profiles!submissions_user_id_fkey(name)")
+          .select(
+            "id, user_id, value, notes, rx, profiles!submissions_user_id_fkey(name, avatar_url)"
+          )
           .eq("workout_id", currentWorkout.id),
         supabase
           .from("comments")
-          .select("id, user_id, body, created_at, profiles!comments_user_id_fkey(name)")
+          .select("id, user_id, body, created_at, profiles!comments_user_id_fkey(name, avatar_url)")
           .eq("workout_id", currentWorkout.id)
           .order("created_at", { ascending: true }),
         supabase
@@ -89,7 +92,7 @@ export default async function GroupPage({
   const members = (
     group.group_members as unknown as {
       joined_at: string;
-      profiles: { id: string; name: string };
+      profiles: { id: string; name: string; avatar_url: string | null };
     }[]
   ).sort((a, b) => new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime());
 
@@ -109,7 +112,7 @@ export default async function GroupPage({
     value: number;
     notes: string | null;
     rx: boolean;
-    profiles: { name: string };
+    profiles: { name: string; avatar_url: string | null };
   };
   type Submission = SubmissionRow & { reactions: { user_id: string; emoji: string }[] };
   type Comment = {
@@ -117,7 +120,7 @@ export default async function GroupPage({
     user_id: string;
     body: string;
     created_at: string;
-    profiles: { name: string };
+    profiles: { name: string; avatar_url: string | null };
   };
 
   type ReactionRow = { submission_id: string; user_id: string; emoji: string };
@@ -234,6 +237,11 @@ export default async function GroupPage({
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-zinc-400 w-4">{i + 1}</span>
+                      <Avatar
+                        src={submission.profiles.avatar_url}
+                        name={submission.profiles.name}
+                        size="sm"
+                      />
                       <span className={submission.user_id === user.id ? "font-medium" : ""}>
                         {submission.profiles.name}
                         {submission.user_id === user.id && (
@@ -289,9 +297,12 @@ export default async function GroupPage({
         <ul className="space-y-2">
           {members.map((member) => (
             <li key={member.profiles.id} className="flex items-center justify-between text-sm">
-              <span className={member.profiles.id === setterId ? "font-medium" : ""}>
-                {member.profiles.name}
-              </span>
+              <div className="flex items-center gap-2">
+                <Avatar src={member.profiles.avatar_url} name={member.profiles.name} size="sm" />
+                <span className={member.profiles.id === setterId ? "font-medium" : ""}>
+                  {member.profiles.name}
+                </span>
+              </div>
               <span className="text-xs text-zinc-400">
                 {member.profiles.id === setterId &&
                   (isCurrentWeek ? "setting this week" : "set this week")}
