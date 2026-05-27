@@ -11,6 +11,7 @@ import { WeekNav } from "./_components/WeekNav";
 import Link from "next/link";
 import { InviteSection } from "./_components/InviteSection";
 import { Avatar } from "@/app/_components/Avatar";
+import { SetterPicker } from "./_components/SetterPicker";
 
 const METRIC_LABELS: Record<string, string> = {
   time: "For time",
@@ -41,7 +42,12 @@ export default async function GroupPage({
   const effectiveWeek = requestedWeek > todayWeekStr ? todayWeekStr : requestedWeek;
   const isCurrentWeek = effectiveWeek === todayWeekStr;
 
-  const [{ data: group }, { data: currentWorkout }, { data: allWorkoutWeeks }] = await Promise.all([
+  const [
+    { data: group },
+    { data: currentWorkout },
+    { data: allWorkoutWeeks },
+    { data: setterOverride },
+  ] = await Promise.all([
     supabase
       .from("groups")
       .select(
@@ -61,6 +67,12 @@ export default async function GroupPage({
       .select("week_start_date")
       .eq("group_id", id)
       .order("week_start_date", { ascending: true }),
+    supabase
+      .from("setter_overrides")
+      .select("user_id")
+      .eq("group_id", id)
+      .eq("week_start_date", effectiveWeek)
+      .maybeSingle(),
   ]);
 
   if (!group) redirect("/dashboard");
@@ -97,10 +109,12 @@ export default async function GroupPage({
   ).sort((a, b) => new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime());
 
   const [effY, effM, effD] = effectiveWeek.split("-").map(Number);
-  const setterId = getWeekSetter(
+  const naturalSetterId = getWeekSetter(
     members.map((m) => ({ id: m.profiles.id, joined_at: m.joined_at })),
     new Date(effY, effM - 1, effD)
   );
+  const isOverridden = setterOverride?.user_id != null;
+  const setterId = setterOverride?.user_id ?? naturalSetterId;
   const setter = members.find((m) => m.profiles.id === setterId);
   const isAdmin = group.admin_user_id === user.id;
   const isMyTurn = setterId === user.id;
@@ -155,13 +169,24 @@ export default async function GroupPage({
           nextWeek={nextWeek}
           isCurrentWeek={isCurrentWeek}
         />
-        {isCurrentWeek && (
-          <p className="text-sm text-zinc-500">
-            {isMyTurn
-              ? "Your turn to set the workout"
-              : `${setter?.profiles.name}'s turn to set the workout`}
-          </p>
-        )}
+        {isCurrentWeek &&
+          setterId &&
+          (isAdmin && !currentWorkout ? (
+            <SetterPicker
+              groupId={id}
+              weekStart={effectiveWeek}
+              setterId={setterId}
+              isOverridden={isOverridden}
+              isMyTurn={isMyTurn}
+              members={members.map((m) => ({ id: m.profiles.id, name: m.profiles.name }))}
+            />
+          ) : (
+            <p className="text-sm text-zinc-500">
+              {isMyTurn
+                ? "Your turn to set the workout"
+                : `${setter?.profiles.name}'s turn to set the workout`}
+            </p>
+          ))}
         {currentWorkout ? (
           <div className="rounded-lg border border-zinc-200 p-4 space-y-2">
             <p className="font-medium">{currentWorkout.title}</p>
