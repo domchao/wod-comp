@@ -171,7 +171,7 @@ export default async function GroupPage({
         />
         {isCurrentWeek &&
           setterId &&
-          (isAdmin && !currentWorkout ? (
+          (isAdmin ? (
             <SetterPicker
               groupId={id}
               weekStart={effectiveWeek}
