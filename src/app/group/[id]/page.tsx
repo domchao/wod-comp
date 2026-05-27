@@ -173,7 +173,7 @@ export default async function GroupPage({
               />
             )}
             {currentWorkout.description && (
-              <p className="text-sm text-zinc-500">{currentWorkout.description}</p>
+              <p className="text-sm text-zinc-500 whitespace-pre-wrap">{currentWorkout.description}</p>
             )}
             <p className="text-xs text-zinc-400">{METRIC_LABELS[currentWorkout.metric_type]}</p>
             {isCurrentWeek && (
