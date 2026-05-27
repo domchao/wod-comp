@@ -17,7 +17,8 @@ async function verifyAdmin(supabase: Awaited<ReturnType<typeof createClient>>, g
     .single();
 
   if (!group) return { user: null, error: "Group not found" };
-  if (group.admin_user_id !== user.id) return { user: null, error: "Only the group admin can change the setter" };
+  if (group.admin_user_id !== user.id)
+    return { user: null, error: "Only the group admin can change the setter" };
 
   return { user, error: null };
 }

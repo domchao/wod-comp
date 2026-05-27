@@ -42,7 +42,12 @@ export default async function GroupPage({
   const effectiveWeek = requestedWeek > todayWeekStr ? todayWeekStr : requestedWeek;
   const isCurrentWeek = effectiveWeek === todayWeekStr;
 
-  const [{ data: group }, { data: currentWorkout }, { data: allWorkoutWeeks }, { data: setterOverride }] = await Promise.all([
+  const [
+    { data: group },
+    { data: currentWorkout },
+    { data: allWorkoutWeeks },
+    { data: setterOverride },
+  ] = await Promise.all([
     supabase
       .from("groups")
       .select(
@@ -164,8 +169,9 @@ export default async function GroupPage({
           nextWeek={nextWeek}
           isCurrentWeek={isCurrentWeek}
         />
-        {isCurrentWeek && setterId && (
-          isAdmin && !currentWorkout ? (
+        {isCurrentWeek &&
+          setterId &&
+          (isAdmin && !currentWorkout ? (
             <SetterPicker
               groupId={id}
               weekStart={effectiveWeek}
@@ -180,8 +186,7 @@ export default async function GroupPage({
                 ? "Your turn to set the workout"
                 : `${setter?.profiles.name}'s turn to set the workout`}
             </p>
-          )
-        )}
+          ))}
         {currentWorkout ? (
           <div className="rounded-lg border border-zinc-200 p-4 space-y-2">
             <p className="font-medium">{currentWorkout.title}</p>

@@ -56,7 +56,9 @@ export function SetterPicker({
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <p className="text-sm text-zinc-500">
-        {isMyTurn ? "Your turn to set the workout" : `${currentSetter?.name}'s turn to set the workout`}
+        {isMyTurn
+          ? "Your turn to set the workout"
+          : `${currentSetter?.name}'s turn to set the workout`}
       </p>
 
       <div className="relative flex items-center gap-1.5" ref={ref}>
