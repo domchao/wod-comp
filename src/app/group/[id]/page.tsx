@@ -281,9 +281,19 @@ export default async function GroupPage({
                         </span>
                       )}
                     </div>
-                    <span className="font-mono text-sm">
-                      {formatValue(submission.value, currentWorkout.metric_type)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm">
+                        {formatValue(submission.value, currentWorkout.metric_type)}
+                      </span>
+                      {isAdmin && submission.user_id !== user.id && (
+                        <Link
+                          href={`/group/${id}/submission/${submission.id}/edit`}
+                          className="text-xs text-zinc-400 underline hover:text-zinc-600"
+                        >
+                          Edit
+                        </Link>
+                      )}
+                    </div>
                   </div>
                   {submission.notes && (
                     <p className="pl-6 text-xs text-zinc-500 italic">{submission.notes}</p>
