@@ -22,33 +22,33 @@ const members = [
 describe("getWeekStart", () => {
   it("returns the same Monday when given a Monday", () => {
     const result = getWeekStart(MON_18_MAY);
-    expect(result.getFullYear()).toBe(2026);
-    expect(result.getMonth()).toBe(4); // May (0-indexed)
-    expect(result.getDate()).toBe(18);
+    expect(result.getUTCFullYear()).toBe(2026);
+    expect(result.getUTCMonth()).toBe(4); // May (0-indexed)
+    expect(result.getUTCDate()).toBe(18);
   });
 
   it("returns the Monday of the week when given a Wednesday", () => {
     const result = getWeekStart(WED_20_MAY);
-    expect(result.getDate()).toBe(18);
+    expect(result.getUTCDate()).toBe(18);
   });
 
   it("returns the Monday of the week when given a Saturday", () => {
     const result = getWeekStart(SAT_23_MAY);
-    expect(result.getDate()).toBe(18);
+    expect(result.getUTCDate()).toBe(18);
   });
 
   it("returns the previous Monday when given a Sunday", () => {
     // Sunday May 24 → Monday May 18 (not May 25)
     const result = getWeekStart(SUN_24_MAY);
-    expect(result.getDate()).toBe(18);
+    expect(result.getUTCDate()).toBe(18);
   });
 
-  it("resets time to midnight", () => {
+  it("resets time to midnight UTC", () => {
     const result = getWeekStart(WED_20_MAY);
-    expect(result.getHours()).toBe(0);
-    expect(result.getMinutes()).toBe(0);
-    expect(result.getSeconds()).toBe(0);
-    expect(result.getMilliseconds()).toBe(0);
+    expect(result.getUTCHours()).toBe(0);
+    expect(result.getUTCMinutes()).toBe(0);
+    expect(result.getUTCSeconds()).toBe(0);
+    expect(result.getUTCMilliseconds()).toBe(0);
   });
 });
 

@@ -81,6 +81,13 @@ export function HeaderMenu({ groupId, isAdmin }: { groupId: string; isAdmin?: bo
           {isAdmin && (
             <>
               <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
+              <Link
+                href={`/group/${groupId}/rotation`}
+                className="block px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                onClick={() => setOpen(false)}
+              >
+                Setter schedule
+              </Link>
               {confirmDelete ? (
                 <div className="px-4 py-2 space-y-2">
                   <p className="text-xs text-zinc-500">Delete this group and all its data?</p>

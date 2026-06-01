@@ -111,7 +111,7 @@ export default async function GroupPage({
   const [effY, effM, effD] = effectiveWeek.split("-").map(Number);
   const naturalSetterId = getWeekSetter(
     members.map((m) => ({ id: m.profiles.id, joined_at: m.joined_at })),
-    new Date(effY, effM - 1, effD)
+    new Date(Date.UTC(effY, effM - 1, effD))
   );
   const isOverridden = setterOverride?.user_id != null;
   const setterId = setterOverride?.user_id ?? naturalSetterId;

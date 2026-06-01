@@ -4,17 +4,17 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function getWeekStart(date: Date = new Date()): Date {
   const d = new Date(date);
-  const day = d.getDay(); // 0 = Sunday
-  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-  d.setHours(0, 0, 0, 0);
+  const day = d.getUTCDay(); // 0 = Sunday
+  d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
+  d.setUTCHours(0, 0, 0, 0);
   return d;
 }
 
 export function formatWeekStart(date: Date = new Date()): string {
   const d = getWeekStart(date);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
