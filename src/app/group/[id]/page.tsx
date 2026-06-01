@@ -79,7 +79,9 @@ export default async function GroupPage({
 
   const sortedWeeks = (allWorkoutWeeks ?? []).map((w) => w.week_start_date).sort();
   const prevWeek = sortedWeeks.filter((w) => w < effectiveWeek).at(-1) ?? null;
-  const nextWeek = sortedWeeks.filter((w) => w > effectiveWeek && w <= todayWeekStr)[0] ?? null;
+  const nextWeek =
+    sortedWeeks.filter((w) => w > effectiveWeek && w <= todayWeekStr)[0] ??
+    (effectiveWeek < todayWeekStr ? todayWeekStr : null);
 
   const [{ data: submissions }, { data: comments }, { data: reactionRows }] = currentWorkout
     ? await Promise.all([
