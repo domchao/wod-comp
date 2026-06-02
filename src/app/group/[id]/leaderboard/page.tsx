@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { computeLeaderboard } from "@/lib/scoring";
+import { formatWeekStart } from "@/lib/rotation";
 import { Avatar } from "@/app/_components/Avatar";
 import Link from "next/link";
 
@@ -16,12 +17,13 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ id
 
   const [{ data: group }, { data: workouts }] = await Promise.all([
     supabase.from("groups").select("id, name").eq("id", id).single(),
-    supabase.from("workouts").select("id, metric_type").eq("group_id", id),
+    supabase.from("workouts").select("id, metric_type, week_start_date").eq("group_id", id),
   ]);
 
   if (!group) redirect("/dashboard");
 
-  const allWorkouts = workouts ?? [];
+  const currentWeek = formatWeekStart();
+  const allWorkouts = (workouts ?? []).filter((w) => w.week_start_date < currentWeek);
 
   type SubmissionRow = {
     user_id: string;
