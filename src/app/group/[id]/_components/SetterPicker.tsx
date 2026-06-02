@@ -81,7 +81,7 @@ export function SetterPicker({
               title="Revert to natural rotation"
               className="text-xs text-amber-600 dark:text-amber-400 hover:underline disabled:opacity-50"
             >
-              manual
+              Revert
             </button>
           </>
         )}

@@ -45,32 +45,44 @@ export async function createWorkout(_prevState: unknown, formData: FormData) {
 
   const { data: group } = await supabase
     .from("groups")
-    .select("admin_user_id, group_members(user_id, joined_at)")
+    .select("admin_user_id, timezone, group_members(user_id, rotation_order)")
     .eq("id", groupId)
     .single();
 
   if (!group) return { error: "Group not found" };
 
-  const members = (group.group_members as unknown as { user_id: string; joined_at: string }[]).map(
-    (m) => ({ id: m.user_id, joined_at: m.joined_at })
-  );
+  const weekStart = formatWeekStart(new Date(), group.timezone ?? "UTC");
 
-  const setterId = getWeekSetter(members);
+  const [{ data: overrideRow }, { data: existing }] = await Promise.all([
+    supabase
+      .from("setter_overrides")
+      .select("user_id")
+      .eq("group_id", groupId)
+      .eq("week_start_date", weekStart)
+      .maybeSingle(),
+    supabase
+      .from("workouts")
+      .select("id")
+      .eq("group_id", groupId)
+      .eq("week_start_date", weekStart)
+      .maybeSingle(),
+  ]);
+
+  const sortedMembers = (
+    group.group_members as unknown as { user_id: string; rotation_order: number }[]
+  )
+    .slice()
+    .sort((a, b) => a.rotation_order - b.rotation_order)
+    .map((m) => ({ id: m.user_id, rotation_order: m.rotation_order }));
+
+  const naturalSetterId = getWeekSetter(sortedMembers, new Date(), group.timezone ?? "UTC");
+  const setterId = overrideRow?.user_id ?? naturalSetterId;
   const isAdmin = group.admin_user_id === user.id;
   const isMyTurn = setterId === user.id;
 
   if (!isMyTurn && !isAdmin) {
     return { error: "It's not your turn to set the workout this week" };
   }
-
-  const weekStart = formatWeekStart();
-
-  const { data: existing } = await supabase
-    .from("workouts")
-    .select("id")
-    .eq("group_id", groupId)
-    .eq("week_start_date", weekStart)
-    .maybeSingle();
 
   if (existing) return { error: "A workout has already been posted for this week" };
 

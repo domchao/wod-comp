@@ -37,47 +37,44 @@ export default async function GroupPage({
 
   if (!user) redirect("/");
 
-  const todayWeekStr = formatWeekStart();
+  const { data: group } = await supabase
+    .from("groups")
+    .select(
+      `id, name, invite_code, admin_user_id, timezone,
+       group_members(joined_at, rotation_order, profiles(id, name, avatar_url))`
+    )
+    .eq("id", id)
+    .single();
+
+  if (!group) redirect("/dashboard");
+
+  const todayWeekStr = formatWeekStart(new Date(), group.timezone ?? "UTC");
   const rawWeek = (await searchParams).week;
   const requestedWeek = typeof rawWeek === "string" ? rawWeek : todayWeekStr;
   // Clamp to current week — don't allow viewing future weeks
   const effectiveWeek = requestedWeek > todayWeekStr ? todayWeekStr : requestedWeek;
   const isCurrentWeek = effectiveWeek === todayWeekStr;
 
-  const [
-    { data: group },
-    { data: currentWorkout },
-    { data: allWorkoutWeeks },
-    { data: setterOverride },
-  ] = await Promise.all([
-    supabase
-      .from("groups")
-      .select(
-        `id, name, invite_code, admin_user_id,
-         group_members(joined_at, profiles(id, name, avatar_url))`
-      )
-      .eq("id", id)
-      .single(),
-    supabase
-      .from("workouts")
-      .select("id, title, description, metric_type, photo_url")
-      .eq("group_id", id)
-      .eq("week_start_date", effectiveWeek)
-      .maybeSingle(),
-    supabase
-      .from("workouts")
-      .select("week_start_date")
-      .eq("group_id", id)
-      .order("week_start_date", { ascending: true }),
-    supabase
-      .from("setter_overrides")
-      .select("user_id")
-      .eq("group_id", id)
-      .eq("week_start_date", effectiveWeek)
-      .maybeSingle(),
-  ]);
-
-  if (!group) redirect("/dashboard");
+  const [{ data: currentWorkout }, { data: allWorkoutWeeks }, { data: setterOverride }] =
+    await Promise.all([
+      supabase
+        .from("workouts")
+        .select("id, title, description, metric_type, photo_url")
+        .eq("group_id", id)
+        .eq("week_start_date", effectiveWeek)
+        .maybeSingle(),
+      supabase
+        .from("workouts")
+        .select("week_start_date")
+        .eq("group_id", id)
+        .order("week_start_date", { ascending: true }),
+      supabase
+        .from("setter_overrides")
+        .select("user_id")
+        .eq("group_id", id)
+        .eq("week_start_date", effectiveWeek)
+        .maybeSingle(),
+    ]);
 
   const sortedWeeks = (allWorkoutWeeks ?? []).map((w) => w.week_start_date).sort();
   const prevWeek = sortedWeeks.filter((w) => w < effectiveWeek).at(-1) ?? null;
@@ -108,14 +105,16 @@ export default async function GroupPage({
   const members = (
     group.group_members as unknown as {
       joined_at: string;
+      rotation_order: number;
       profiles: { id: string; name: string; avatar_url: string | null };
     }[]
-  ).sort((a, b) => new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime());
+  ).sort((a, b) => a.rotation_order - b.rotation_order);
 
   const [effY, effM, effD] = effectiveWeek.split("-").map(Number);
   const naturalSetterId = getWeekSetter(
-    members.map((m) => ({ id: m.profiles.id, joined_at: m.joined_at })),
-    new Date(Date.UTC(effY, effM - 1, effD))
+    members.map((m) => ({ id: m.profiles.id, rotation_order: m.rotation_order })),
+    new Date(Date.UTC(effY, effM - 1, effD)),
+    group.timezone ?? "UTC"
   );
   const isOverridden = setterOverride?.user_id != null;
   const setterId = setterOverride?.user_id ?? naturalSetterId;

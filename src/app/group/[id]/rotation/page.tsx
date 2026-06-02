@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { getWeekStart, getWeekSetter, formatWeekStart } from "@/lib/rotation";
+import { getWeekStart, getWeekSetter } from "@/lib/rotation";
 import Link from "next/link";
 
 const WEEKS_AHEAD = 12;
@@ -15,7 +15,7 @@ export default async function RotationPage({ params }: { params: Promise<{ id: s
 
   const { data: group } = await supabase
     .from("groups")
-    .select(`id, name, admin_user_id, group_members(joined_at, profiles(id, name))`)
+    .select(`id, name, admin_user_id, timezone, group_members(rotation_order, profiles(id, name))`)
     .eq("id", id)
     .single();
 
@@ -24,16 +24,19 @@ export default async function RotationPage({ params }: { params: Promise<{ id: s
 
   const members = (
     group.group_members as unknown as {
-      joined_at: string;
+      rotation_order: number;
       profiles: { id: string; name: string };
     }[]
-  ).sort((a, b) => new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime());
+  ).sort((a, b) => a.rotation_order - b.rotation_order);
 
-  const thisWeekStart = getWeekStart();
+  const thisWeekStart = getWeekStart(new Date(), group.timezone);
   const weeks = Array.from({ length: WEEKS_AHEAD }, (_, i) => {
     const d = new Date(thisWeekStart);
     d.setUTCDate(d.getUTCDate() + i * 7);
-    return { date: d, str: formatWeekStart(d) };
+    const y = d.getUTCFullYear();
+    const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const dy = String(d.getUTCDate()).padStart(2, "0");
+    return { date: d, str: `${y}-${mo}-${dy}` };
   });
 
   const { data: overrides } = await supabase
@@ -51,8 +54,9 @@ export default async function RotationPage({ params }: { params: Promise<{ id: s
 
   const schedule = weeks.map(({ date, str }, i) => {
     const naturalSetterId = getWeekSetter(
-      members.map((m) => ({ id: m.profiles.id, joined_at: m.joined_at })),
-      date
+      members.map((m) => ({ id: m.profiles.id, rotation_order: m.rotation_order })),
+      date,
+      group.timezone
     );
     const overrideUserId = overrideMap[str];
     const setterId = overrideUserId ?? naturalSetterId;
