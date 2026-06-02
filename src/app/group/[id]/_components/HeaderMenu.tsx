@@ -57,6 +57,13 @@ export function HeaderMenu({ groupId, isAdmin }: { groupId: string; isAdmin?: bo
             All groups
           </Link>
           <Link
+            href={`/group/${groupId}/leaderboard`}
+            className="block px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            onClick={() => setOpen(false)}
+          >
+            Leaderboard
+          </Link>
+          <Link
             href={`/group/${groupId}/stats`}
             className="block px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
             onClick={() => setOpen(false)}
