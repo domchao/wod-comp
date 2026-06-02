@@ -13,6 +13,8 @@ import { InviteSection } from "./_components/InviteSection";
 import { Avatar } from "@/app/_components/Avatar";
 import { SetterPicker } from "./_components/SetterPicker";
 
+const MEDAL: Record<number, string> = { 0: "🥇", 1: "🥈", 2: "🥉" };
+
 const METRIC_LABELS: Record<string, string> = {
   time: "For time",
   reps: "Max reps",
@@ -265,7 +267,9 @@ export default async function GroupPage({
                 <li key={submission.user_id} className="space-y-1.5">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-zinc-400 w-4">{i + 1}</span>
+                      <span className="w-6 text-center text-base">
+                        {MEDAL[i] ?? <span className="text-xs text-zinc-400">{i + 1}</span>}
+                      </span>
                       <Avatar
                         src={submission.profiles.avatar_url}
                         name={submission.profiles.name}
