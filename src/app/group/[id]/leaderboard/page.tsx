@@ -16,13 +16,13 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ id
   if (!user) redirect("/");
 
   const [{ data: group }, { data: workouts }] = await Promise.all([
-    supabase.from("groups").select("id, name").eq("id", id).single(),
+    supabase.from("groups").select("id, name, timezone").eq("id", id).single(),
     supabase.from("workouts").select("id, metric_type, week_start_date").eq("group_id", id),
   ]);
 
   if (!group) redirect("/dashboard");
 
-  const currentWeek = formatWeekStart();
+  const currentWeek = formatWeekStart(new Date(), group.timezone ?? "UTC");
   const allWorkouts = (workouts ?? []).filter((w) => w.week_start_date < currentWeek);
 
   type SubmissionRow = {

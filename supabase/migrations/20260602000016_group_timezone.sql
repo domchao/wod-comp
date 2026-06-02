@@ -1,0 +1,2 @@
+ALTER TABLE groups
+  ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC';

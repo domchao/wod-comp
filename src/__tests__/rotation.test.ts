@@ -14,9 +14,9 @@ const MON_01_JUN = new Date("2026-06-01T12:00:00");
 const MON_08_JUN = new Date("2026-06-08T12:00:00");
 
 const members = [
-  { id: "alice", joined_at: "2026-01-01T00:00:00Z" },
-  { id: "bob", joined_at: "2026-01-02T00:00:00Z" },
-  { id: "charlie", joined_at: "2026-01-03T00:00:00Z" },
+  { id: "alice", rotation_order: 0 },
+  { id: "bob", rotation_order: 1 },
+  { id: "charlie", rotation_order: 2 },
 ];
 
 describe("getWeekStart", () => {
@@ -72,7 +72,7 @@ describe("getWeekSetter", () => {
   });
 
   it("always returns the single member regardless of week", () => {
-    const single = [{ id: "alice", joined_at: "2026-01-01T00:00:00Z" }];
+    const single = [{ id: "alice", rotation_order: 0 }];
     expect(getWeekSetter(single, MON_18_MAY)).toBe("alice");
     expect(getWeekSetter(single, MON_25_MAY)).toBe("alice");
     expect(getWeekSetter(single, MON_01_JUN)).toBe("alice");
@@ -106,8 +106,37 @@ describe("getWeekSetter", () => {
     expect(week4).toBe(week1);
   });
 
-  it("sorts by joined_at regardless of input order", () => {
-    const shuffled = [members[2], members[0], members[1]];
-    expect(getWeekSetter(shuffled, MON_18_MAY)).toBe(getWeekSetter(members, MON_18_MAY));
+  it("uses members in the provided order — callers must sort by rotation_order", () => {
+    // Reverse order should give different result
+    const reversed = [...members].reverse();
+    // With 3 members, at least one week will differ
+    const results = [MON_18_MAY, MON_25_MAY, MON_01_JUN].map((w) => getWeekSetter(members, w));
+    const reversedResults = [MON_18_MAY, MON_25_MAY, MON_01_JUN].map((w) =>
+      getWeekSetter(reversed, w)
+    );
+    expect(results).not.toEqual(reversedResults);
+  });
+});
+
+describe("timezone support", () => {
+  it("returns different week starts for UTC vs UTC+8 around the transition", () => {
+    // Sunday 2026-05-24 20:00 UTC = Monday 2026-05-25 04:00 in Asia/Singapore (UTC+8)
+    const lateUTCSunday = new Date("2026-05-24T20:00:00Z");
+    expect(formatWeekStart(lateUTCSunday, "UTC")).toBe("2026-05-18");
+    expect(formatWeekStart(lateUTCSunday, "Asia/Singapore")).toBe("2026-05-25");
+  });
+
+  it("getWeekSetter uses timezone when computing week index", () => {
+    const lateUTCSunday = new Date("2026-05-24T20:00:00Z");
+    // Single member always wins regardless, so use a bigger group to see the difference
+    // UTC: still in week of May 18 → alice (rotation_order 0, index for that week)
+    // UTC+8: in week of May 25 → different index
+    const twoMembers = [
+      { id: "alice", rotation_order: 0 },
+      { id: "bob", rotation_order: 1 },
+    ];
+    const utcResult = getWeekSetter(twoMembers, lateUTCSunday, "UTC");
+    const sgResult = getWeekSetter(twoMembers, lateUTCSunday, "Asia/Singapore");
+    expect(utcResult).not.toBe(sgResult);
   });
 });
