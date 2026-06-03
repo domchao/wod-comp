@@ -36,7 +36,11 @@ export function PushNotificationPrompt() {
         }
       })
       .catch(console.error);
-  }, [state]);
+    // state is intentionally read from mount-time closure — re-running on
+    // state changes would re-check getSubscription() after unsubscribe,
+    // overwriting the idle state back to subscribed before the user sees the prompt.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function enable() {
     const reg = await navigator.serviceWorker.ready;
