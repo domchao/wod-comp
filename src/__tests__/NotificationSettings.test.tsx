@@ -93,6 +93,14 @@ describe("NotificationSettings", () => {
       });
     });
 
+    it("re-syncs the existing subscription to the server on mount", async () => {
+      stubPushSupport({ existingSub: MOCK_SUB });
+      render(<NotificationSettings />);
+      await waitFor(() => {
+        expect(vi.mocked(subscribeUser)).toHaveBeenCalledOnce();
+      });
+    });
+
     it("clicking Mute calls subscription.unsubscribe and unsubscribeUser", async () => {
       stubPushSupport({ existingSub: MOCK_SUB });
       const user = userEvent.setup();

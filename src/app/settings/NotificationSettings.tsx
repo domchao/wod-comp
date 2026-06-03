@@ -33,6 +33,7 @@ export function NotificationSettings() {
         if (sub) {
           setSubscription(sub);
           setState("subscribed");
+          subscribeUser(JSON.parse(JSON.stringify(sub))).catch(console.error);
         }
       })
       .catch(console.error);
