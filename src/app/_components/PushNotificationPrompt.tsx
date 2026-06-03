@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { subscribeUser, unsubscribeUser } from "@/app/notifications/actions";
+import { subscribeUser } from "@/app/notifications/actions";
 
 function urlBase64ToUint8Array(base64: string) {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -21,7 +21,6 @@ function getInitialPushState(): State {
 
 export function PushNotificationPrompt() {
   const [state, setState] = useState<State>(getInitialPushState);
-  const [subscription, setSubscription] = useState<PushSubscription | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -30,10 +29,7 @@ export function PushNotificationPrompt() {
       .register("/sw.js", { scope: "/", updateViaCache: "none" })
       .then((reg) => reg.pushManager.getSubscription())
       .then((sub) => {
-        if (sub) {
-          setSubscription(sub);
-          setState("subscribed");
-        }
+        if (sub) setState("subscribed");
       })
       .catch(console.error);
     // state is intentionally read from mount-time closure — re-running on
@@ -48,34 +44,12 @@ export function PushNotificationPrompt() {
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
     });
-    setSubscription(sub);
     setState("subscribed");
     await subscribeUser(JSON.parse(JSON.stringify(sub)));
   }
 
-  async function disable() {
-    if (!subscription) return;
-    await subscription.unsubscribe();
-    await unsubscribeUser(subscription.endpoint);
-    setSubscription(null);
-    setState("idle");
-  }
-
-  if (state === "unsupported" || state === "denied" || dismissed) return null;
-
-  if (state === "subscribed") {
-    return (
-      <div className="fixed bottom-20 right-4 z-50">
-        <button
-          onClick={disable}
-          className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline"
-          title="Disable push notifications"
-        >
-          Mute notifications
-        </button>
-      </div>
-    );
-  }
+  if (state === "unsupported" || state === "denied" || state === "subscribed" || dismissed)
+    return null;
 
   return (
     <div className="fixed bottom-20 left-4 right-4 z-50 sm:left-auto sm:right-4 sm:w-80">
