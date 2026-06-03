@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { sendPushToGroupMembers } from "@/lib/push";
 
 export async function submitResult(_prevState: unknown, formData: FormData) {
   const groupId = formData.get("group_id") as string;
@@ -49,6 +50,23 @@ export async function submitResult(_prevState: unknown, formData: FormData) {
     );
 
   if (error) return { error: error.message };
+
+  const [{ data: profile }, { data: workout }] = await Promise.all([
+    supabase.from("profiles").select("name").eq("id", user.id).single(),
+    supabase.from("workouts").select("group_id").eq("id", workoutId).single(),
+  ]);
+
+  if (workout?.group_id) {
+    sendPushToGroupMembers(
+      workout.group_id,
+      {
+        title: "New result logged",
+        body: `${profile?.name ?? "Someone"} just logged their result`,
+        url: `/group/${workout.group_id}`,
+      },
+      user.id
+    ).catch(console.error);
+  }
 
   redirect(`/group/${groupId}`);
 }

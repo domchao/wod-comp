@@ -5,6 +5,7 @@ import { submitResult } from "@/app/group/[id]/submit/actions";
 
 vi.mock("@/lib/supabase/server");
 vi.mock("next/navigation");
+vi.mock("@/lib/push", () => ({ sendPushToGroupMembers: vi.fn().mockResolvedValue(undefined) }));
 
 const USER_ID = "user-1";
 const GROUP_ID = "group-1";
@@ -28,6 +29,20 @@ function buildSupabaseMock({ isMember = true, upsertError = null as string | nul
           upsert: vi
             .fn()
             .mockResolvedValue({ error: upsertError ? { message: upsertError } : null }),
+        };
+      }
+      if (table === "profiles") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { name: "Test User" }, error: null }),
+        };
+      }
+      if (table === "workouts") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { group_id: GROUP_ID }, error: null }),
         };
       }
       return {};
@@ -98,6 +113,20 @@ describe("submitResult", () => {
             };
           }
           if (table === "submissions") return { upsert: upsertSpy };
+          if (table === "profiles") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({ data: { name: "Test User" }, error: null }),
+            };
+          }
+          if (table === "workouts") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({ data: { group_id: GROUP_ID }, error: null }),
+            };
+          }
           return {};
         }),
       } as never);

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatWeekStart, getWeekSetter } from "@/lib/rotation";
 import { redirect } from "next/navigation";
+import { sendPushToGroupMembers } from "@/lib/push";
 
 async function uploadWorkoutPhoto(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -103,6 +104,22 @@ export async function createWorkout(_prevState: unknown, formData: FormData) {
   });
 
   if (error) return { error: error.message };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name")
+    .eq("id", user.id)
+    .single();
+
+  sendPushToGroupMembers(
+    groupId,
+    {
+      title: "New workout posted",
+      body: `${profile?.name ?? "Someone"} just set this week's workout: ${title}`,
+      url: `/group/${groupId}`,
+    },
+    user.id
+  ).catch(console.error);
 
   redirect(`/group/${groupId}`);
 }

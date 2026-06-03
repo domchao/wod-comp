@@ -10,6 +10,7 @@ vi.mock("@/lib/rotation", () => ({
   getWeekSetter: vi.fn(),
   formatWeekStart: vi.fn().mockReturnValue("2026-05-18"),
 }));
+vi.mock("@/lib/push", () => ({ sendPushToGroupMembers: vi.fn().mockResolvedValue(undefined) }));
 
 const USER_ID = "user-1";
 const ADMIN_ID = "admin-1";
@@ -77,6 +78,13 @@ function buildSupabaseMock({
           insert: vi
             .fn()
             .mockResolvedValue({ error: insertError ? { message: insertError } : null }),
+        };
+      }
+      if (table === "profiles") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { name: "Test User" }, error: null }),
         };
       }
       return {};
