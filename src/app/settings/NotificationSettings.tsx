@@ -48,9 +48,13 @@ export function NotificationSettings() {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
       });
+      const result = await subscribeUser(JSON.parse(JSON.stringify(sub)));
+      if (result?.error) {
+        console.error("subscribeUser failed:", result.error);
+        return;
+      }
       setSubscription(sub);
       setState("subscribed");
-      await subscribeUser(JSON.parse(JSON.stringify(sub)));
     } finally {
       setPending(false);
     }
