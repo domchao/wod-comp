@@ -20,11 +20,16 @@ export function GroupsDashboard({ groups }: { groups: Group[] }) {
     <main className="mx-auto max-w-lg px-4 py-6 sm:px-6 space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Your groups</h1>
-        <form action={signOut}>
-          <button type="submit" className="text-sm text-zinc-500 underline hover:text-zinc-900">
-            Sign out
-          </button>
-        </form>
+        <div className="flex items-center gap-4">
+          <Link href="/settings" className="text-sm text-zinc-500 hover:text-zinc-900">
+            Settings
+          </Link>
+          <form action={signOut}>
+            <button type="submit" className="text-sm text-zinc-500 underline hover:text-zinc-900">
+              Sign out
+            </button>
+          </form>
+        </div>
       </div>
 
       <ul className="space-y-2">
