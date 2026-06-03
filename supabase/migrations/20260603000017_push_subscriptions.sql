@@ -23,5 +23,8 @@ CREATE POLICY "push_subscriptions: delete own" ON push_subscriptions
   FOR DELETE TO authenticated
   USING (user_id = auth.uid());
 
+-- Authenticated users can manage their own subscriptions
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.push_subscriptions TO authenticated;
+
 -- Service role can read all subscriptions to send pushes
 GRANT SELECT ON push_subscriptions TO service_role;
