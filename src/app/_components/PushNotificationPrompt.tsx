@@ -39,13 +39,24 @@ export function PushNotificationPrompt() {
   }, []);
 
   async function enable() {
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
-    });
-    setState("subscribed");
-    await subscribeUser(JSON.parse(JSON.stringify(sub)));
+    // On Android Chrome, pushManager.subscribe() does not trigger the OS
+    // notification permission dialog — requestPermission() must be called first.
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      setState("denied");
+      return;
+    }
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+      });
+      setState("subscribed");
+      await subscribeUser(JSON.parse(JSON.stringify(sub)));
+    } catch {
+      setDismissed(true);
+    }
   }
 
   if (state === "unsupported" || state === "denied" || state === "subscribed" || dismissed)
