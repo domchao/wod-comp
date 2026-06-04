@@ -17,10 +17,12 @@ const MOCK_SUB = {
 function stubPushSupport({
   existingSub = null as PushSubscription | null,
   permission = "default" as NotificationPermission,
+  grantedByPrompt = true,
 } = {}) {
   const subscribe = vi.fn().mockResolvedValue(MOCK_SUB);
   const getSubscription = vi.fn().mockResolvedValue(existingSub);
   const registration = { pushManager: { getSubscription, subscribe } };
+  const requestPermission = vi.fn().mockResolvedValue(grantedByPrompt ? "granted" : "denied");
 
   Object.defineProperty(navigator, "serviceWorker", {
     value: {
@@ -34,12 +36,12 @@ function stubPushSupport({
   (window as unknown as Record<string, unknown>).PushManager = class {};
 
   Object.defineProperty(window, "Notification", {
-    value: { permission },
+    value: { permission, requestPermission },
     writable: true,
     configurable: true,
   });
 
-  return { subscribe, getSubscription };
+  return { subscribe, getSubscription, requestPermission };
 }
 
 beforeEach(() => {
@@ -98,6 +100,19 @@ describe("PushNotificationPrompt", () => {
   });
 
   describe("subscribing", () => {
+    it("hides the prompt when the OS permission dialog is denied", async () => {
+      stubPushSupport({ grantedByPrompt: false });
+      const user = userEvent.setup();
+      const { container } = render(<PushNotificationPrompt />);
+
+      await waitFor(() => screen.getByRole("button", { name: /enable/i }));
+      await user.click(screen.getByRole("button", { name: /enable/i }));
+
+      await waitFor(() => {
+        expect(container.firstChild).toBeNull();
+      });
+    });
+
     it("clicking Enable calls pushManager.subscribe and subscribeUser", async () => {
       const { subscribe } = stubPushSupport();
       const user = userEvent.setup();
