@@ -15,3 +15,5 @@ When asked for a commit message, provide only the message text — no shell comm
 
 - bullet list of notable changes
 ```
+
+Make the commit message copyable
