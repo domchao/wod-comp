@@ -6,10 +6,10 @@ export const alt = "My Result — WOD Comp";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-function adminClient() {
+function anonClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }
 
@@ -59,7 +59,7 @@ function Fallback() {
 
 export default async function Image({ params }: { params: Promise<{ submissionId: string }> }) {
   const { submissionId } = await params;
-  const supabase = adminClient();
+  const supabase = anonClient();
 
   const { data: sub } = await supabase
     .from("submissions")

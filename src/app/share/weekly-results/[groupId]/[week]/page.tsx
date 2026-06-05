@@ -3,10 +3,10 @@ import { sortSubmissions, formatValue } from "@/lib/submissions";
 import Link from "next/link";
 import type { Metadata } from "next";
 
-function adminClient() {
+function anonClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }
 
@@ -26,7 +26,7 @@ export async function generateMetadata({
   params: Promise<{ groupId: string; week: string }>;
 }): Promise<Metadata> {
   const { groupId, week } = await params;
-  const supabase = adminClient();
+  const supabase = anonClient();
   const { data: group } = await supabase.from("groups").select("name").eq("id", groupId).single();
 
   const weekLabel = formatWeekLabel(week);
@@ -44,7 +44,7 @@ export default async function WeeklyResultsSharePage({
   params: Promise<{ groupId: string; week: string }>;
 }) {
   const { groupId, week } = await params;
-  const supabase = adminClient();
+  const supabase = anonClient();
 
   const [{ data: group }, { data: workout }] = await Promise.all([
     supabase.from("groups").select("name").eq("id", groupId).single(),
