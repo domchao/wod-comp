@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import webpush from "web-push";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { sendPushToGroupMembers } from "@/lib/push";
+import { sendPushToGroupMembers, sendPushToUsers } from "@/lib/push";
 
 vi.mock("web-push", () => ({
   default: {
@@ -33,6 +33,25 @@ const SUB_B = {
 
 const PAYLOAD = { title: "New workout", body: "Go lift", url: "/group/group-1" };
 
+function buildSubscriptionsMock(
+  subscriptions: (typeof SUB_A)[] = [],
+  deleteInMock = vi.fn().mockResolvedValue({})
+) {
+  return {
+    from: vi.fn().mockImplementation((table: string) => {
+      if (table === "push_subscriptions") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({ data: subscriptions }),
+          delete: vi.fn().mockReturnValue({ in: deleteInMock }),
+        };
+      }
+      return {};
+    }),
+    deleteInMock,
+  };
+}
+
 function buildAdminMock({
   members = [] as { user_id: string }[],
   subscriptions = [] as (typeof SUB_A)[],
@@ -63,6 +82,57 @@ function buildAdminMock({
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(webpush.sendNotification).mockResolvedValue({} as never);
+});
+
+describe("sendPushToUsers", () => {
+  it("does nothing when the user list is empty", async () => {
+    vi.mocked(createSupabaseClient).mockReturnValue(buildSubscriptionsMock() as never);
+    await sendPushToUsers([], PAYLOAD);
+    expect(webpush.sendNotification).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when users have no push subscriptions", async () => {
+    vi.mocked(createSupabaseClient).mockReturnValue(buildSubscriptionsMock([]) as never);
+    await sendPushToUsers([USER_A], PAYLOAD);
+    expect(webpush.sendNotification).not.toHaveBeenCalled();
+  });
+
+  it("sends a push to every subscription found", async () => {
+    vi.mocked(createSupabaseClient).mockReturnValue(
+      buildSubscriptionsMock([SUB_A, SUB_B]) as never
+    );
+
+    await sendPushToUsers([USER_A, USER_B], PAYLOAD);
+
+    expect(webpush.sendNotification).toHaveBeenCalledTimes(2);
+    expect(webpush.sendNotification).toHaveBeenCalledWith(
+      { endpoint: SUB_A.endpoint, keys: { p256dh: SUB_A.p256dh, auth: SUB_A.auth_key } },
+      JSON.stringify({ title: PAYLOAD.title, body: PAYLOAD.body, url: PAYLOAD.url })
+    );
+  });
+
+  it("removes a stale subscription on HTTP 410", async () => {
+    vi.mocked(webpush.sendNotification).mockRejectedValue({ statusCode: 410 });
+    const deleteInMock = vi.fn().mockResolvedValue({});
+    vi.mocked(createSupabaseClient).mockReturnValue(
+      buildSubscriptionsMock([SUB_A], deleteInMock) as never
+    );
+
+    await sendPushToUsers([USER_A], PAYLOAD);
+
+    expect(deleteInMock).toHaveBeenCalledWith("id", [SUB_A.id]);
+  });
+
+  it("uses '/' as the default url", async () => {
+    vi.mocked(createSupabaseClient).mockReturnValue(buildSubscriptionsMock([SUB_A]) as never);
+
+    await sendPushToUsers([USER_A], { title: "T", body: "B" });
+
+    expect(webpush.sendNotification).toHaveBeenCalledWith(
+      expect.anything(),
+      JSON.stringify({ title: "T", body: "B", url: "/" })
+    );
+  });
 });
 
 describe("sendPushToGroupMembers", () => {
