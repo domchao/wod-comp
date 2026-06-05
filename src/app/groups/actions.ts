@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { sendPushToGroupMembers } from "@/lib/push";
 import { randomUUID } from "crypto";
 
 export async function createGroup(_prevState: unknown, formData: FormData) {
@@ -109,6 +110,22 @@ export async function joinGroup(_prevState: unknown, formData: FormData) {
     if (error.message.includes("Invalid invite code")) return { error: "Invalid invite code" };
     return { error: error.message };
   }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name")
+    .eq("id", user.id)
+    .single();
+
+  sendPushToGroupMembers(
+    groupId,
+    {
+      title: "New member",
+      body: `${profile?.name ?? "Someone"} just joined the group`,
+      url: `/group/${groupId}`,
+    },
+    user.id
+  ).catch(console.error);
 
   redirect(`/group/${groupId}`);
 }

@@ -44,6 +44,26 @@ async function sendToSubscription(
   }
 }
 
+export async function sendPushToUsers(userIds: string[], payload: PushPayload): Promise<void> {
+  if (!userIds.length) return;
+
+  const supabase = adminClient();
+
+  const { data: subs } = await supabase
+    .from("push_subscriptions")
+    .select("id, endpoint, p256dh, auth_key")
+    .in("user_id", userIds);
+
+  if (!subs?.length) return;
+
+  const results = await Promise.all(subs.map((s) => sendToSubscription(s, payload)));
+
+  const staleIds = results.flatMap((r) => (r.staleId ? [r.staleId] : []));
+  if (staleIds.length) {
+    await supabase.from("push_subscriptions").delete().in("id", staleIds);
+  }
+}
+
 export async function sendPushToGroupMembers(
   groupId: string,
   payload: PushPayload,
@@ -60,19 +80,5 @@ export async function sendPushToGroupMembers(
 
   const userIds = members.map((m) => m.user_id as string).filter((id) => id !== excludeUserId);
 
-  if (!userIds.length) return;
-
-  const { data: subs } = await supabase
-    .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth_key")
-    .in("user_id", userIds);
-
-  if (!subs?.length) return;
-
-  const results = await Promise.all(subs.map((s) => sendToSubscription(s, payload)));
-
-  const staleIds = results.flatMap((r) => (r.staleId ? [r.staleId] : []));
-  if (staleIds.length) {
-    await supabase.from("push_subscriptions").delete().in("id", staleIds);
-  }
+  await sendPushToUsers(userIds, payload);
 }
