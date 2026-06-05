@@ -6,10 +6,10 @@ export const alt = "Weekly Results — WOD Comp";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-function adminClient() {
+function anonClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }
 
@@ -65,7 +65,7 @@ export default async function Image({
   params: Promise<{ groupId: string; week: string }>;
 }) {
   const { groupId, week } = await params;
-  const supabase = adminClient();
+  const supabase = anonClient();
 
   const [{ data: group }, { data: workout }] = await Promise.all([
     supabase.from("groups").select("name").eq("id", groupId).single(),
