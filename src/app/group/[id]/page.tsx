@@ -35,7 +35,11 @@ export default async function GroupPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/");
+  if (!user) {
+    const sp = await searchParams;
+    const weekParam = typeof sp.week === "string" ? `?week=${sp.week}` : "";
+    redirect(`/?next=${encodeURIComponent(`/group/${id}${weekParam}`)}`);
+  }
 
   const { data: group } = await supabase
     .from("groups")
