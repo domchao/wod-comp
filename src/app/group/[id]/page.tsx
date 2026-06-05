@@ -236,6 +236,14 @@ export default async function GroupPage({
                 )}
               </div>
             )}
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`This week's WOD Comp workout 🏋️\n${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/share/workout/${currentWorkout.id}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+            >
+              Share workout
+            </a>
           </div>
         ) : isCurrentWeek ? (
           canPost ? (
@@ -255,9 +263,21 @@ export default async function GroupPage({
 
       {currentWorkout && (
         <div className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            Leaderboard
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Leaderboard
+            </h2>
+            {rankedSubmissions.length > 0 && (
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`WOD Comp results 🏆\n${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/share/weekly-results/${id}/${effectiveWeek}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+              >
+                Share results
+              </a>
+            )}
+          </div>
           {rankedSubmissions.length === 0 ? (
             <p className="text-sm text-zinc-400">No results yet — be the first to log yours.</p>
           ) : (
@@ -301,6 +321,18 @@ export default async function GroupPage({
                       reactions={submission.reactions}
                     />
                   </div>
+                  {submission.user_id === user.id && (
+                    <div className="pl-6">
+                      <a
+                        href={`https://wa.me/?text=${encodeURIComponent(`Check out my WOD Comp result 💪\n${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/share/result/${submission.id}`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                      >
+                        Share my result
+                      </a>
+                    </div>
+                  )}
                 </li>
               ))}
             </ol>
