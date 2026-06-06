@@ -31,6 +31,13 @@ const METRIC_LABELS: Record<string, string> = {
   rounds: "AMRAP",
 };
 
+const METRIC_COLORS: Record<string, { bg: string; text: string }> = {
+  time: { bg: "#78350f", text: "#fcd34d" },
+  reps: { bg: "#14532d", text: "#86efac" },
+  weight: { bg: "#3b0764", text: "#d8b4fe" },
+  rounds: { bg: "#1e3a8a", text: "#93c5fd" },
+};
+
 function Fallback() {
   return (
     <div
@@ -96,11 +103,10 @@ export default async function Image({ params }: { params: Promise<{ workoutId: s
 
   const weekLabel = formatWeekLabel(workout.week_start_date);
   const metricLabel = METRIC_LABELS[workout.metric_type] ?? workout.metric_type.toUpperCase();
-  const description = workout.description
-    ? workout.description.length > 180
-      ? workout.description.slice(0, 177) + "…"
-      : workout.description
-    : "";
+  const metricColor = METRIC_COLORS[workout.metric_type] ?? { bg: "#27272a", text: "#a1a1aa" };
+
+  const descLines = (workout.description ?? "").split("\n").filter((l: string) => l.trim());
+  const descPreview = descLines.slice(0, 2).join("\n") + (descLines.length > 2 ? "\n…" : "");
 
   return new ImageResponse(
     <div
@@ -111,15 +117,31 @@ export default async function Image({ params }: { params: Promise<{ workoutId: s
         flexDirection: "column",
         background: "#09090b",
         fontFamily: "system-ui, sans-serif",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
+      {/* Left accent bar */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: 4,
+          height: "100%",
+          background: metricColor.text,
+          display: "flex",
+          opacity: 0.7,
+        }}
+      />
+
       {/* Header */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "32px 48px 28px",
+          padding: "32px 48px 28px 60px",
           borderBottom: "1px solid #27272a",
         }}
       >
@@ -163,9 +185,29 @@ export default async function Image({ params }: { params: Promise<{ workoutId: s
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "40px 48px",
+          padding: "40px 48px 40px 60px",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
+        {/* Watermark */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: -10,
+            right: 40,
+            fontSize: 200,
+            fontWeight: 900,
+            color: "#ffffff",
+            opacity: 0.03,
+            letterSpacing: "-4px",
+            lineHeight: 1,
+            display: "flex",
+          }}
+        >
+          {metricLabel}
+        </div>
+
         <div
           style={{
             fontSize: workout.title.length > 40 ? 52 : 68,
@@ -178,16 +220,17 @@ export default async function Image({ params }: { params: Promise<{ workoutId: s
         >
           {workout.title}
         </div>
-        {description && (
+        {descPreview && (
           <div
             style={{
               fontSize: 22,
               color: "#a1a1aa",
               lineHeight: 1.55,
               maxWidth: 960,
+              whiteSpace: "pre-line",
             }}
           >
-            {description}
+            {descPreview}
           </div>
         )}
       </div>
@@ -198,14 +241,14 @@ export default async function Image({ params }: { params: Promise<{ workoutId: s
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "24px 48px 32px",
+          padding: "24px 48px 32px 60px",
           borderTop: "1px solid #27272a",
         }}
       >
         <div
           style={{
-            background: "#1e3a8a",
-            color: "#93c5fd",
+            background: metricColor.bg,
+            color: metricColor.text,
             fontSize: 13,
             fontWeight: 700,
             letterSpacing: "2px",
