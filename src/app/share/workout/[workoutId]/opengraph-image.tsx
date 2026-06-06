@@ -106,7 +106,7 @@ export default async function Image({ params }: { params: Promise<{ workoutId: s
   const metricColor = METRIC_COLORS[workout.metric_type] ?? { bg: "#27272a", text: "#a1a1aa" };
 
   const descLines = (workout.description ?? "").split("\n").filter((l: string) => l.trim());
-  const descPreview = descLines.slice(0, 2).join("\n") + (descLines.length > 2 ? "\n…" : "");
+  const descPreview = descLines.slice(0, 3).join("\n") + (descLines.length > 3 ? "\n…" : "");
 
   return new ImageResponse(
     <div
