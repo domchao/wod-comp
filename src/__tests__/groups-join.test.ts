@@ -14,13 +14,14 @@ const GROUP_ID = "group-42";
 function buildSupabaseMock({
   rpcError = null as { message: string } | null,
   profileName = "Test User",
+  newlyJoined = true,
 } = {}) {
   return {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }),
     },
     rpc: vi.fn().mockResolvedValue({
-      data: rpcError ? null : GROUP_ID,
+      data: rpcError ? null : { group_id: GROUP_ID, newly_joined: newlyJoined },
       error: rpcError,
     }),
     from: vi.fn().mockImplementation((table: string) => {
@@ -69,6 +70,13 @@ describe("joinGroup", () => {
       }),
       USER_ID
     );
+  });
+
+  it("does not send a push when the user is already a member", async () => {
+    vi.mocked(createClient).mockResolvedValue(buildSupabaseMock({ newlyJoined: false }) as never);
+    await expect(joinGroup(null, makeFormData())).rejects.toThrow("redirect");
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/group/${GROUP_ID}`);
+    expect(vi.mocked(sendPushToGroupMembers)).not.toHaveBeenCalled();
   });
 
   it("returns an error when the invite code is missing", async () => {
