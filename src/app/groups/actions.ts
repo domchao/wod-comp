@@ -102,7 +102,7 @@ export async function joinGroup(_prevState: unknown, formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
-  const { data: groupId, error } = await supabase.rpc("join_group_by_invite_code", {
+  const { data, error } = await supabase.rpc("join_group_by_invite_code", {
     p_invite_code: inviteCode,
   });
 
@@ -111,21 +111,23 @@ export async function joinGroup(_prevState: unknown, formData: FormData) {
     return { error: error.message };
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("name")
-    .eq("id", user.id)
-    .single();
+  if (data.newly_joined) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", user.id)
+      .single();
 
-  sendPushToGroupMembers(
-    groupId,
-    {
-      title: "New member",
-      body: `${profile?.name ?? "Someone"} just joined the group`,
-      url: `/group/${groupId}`,
-    },
-    user.id
-  ).catch(console.error);
+    sendPushToGroupMembers(
+      data.group_id,
+      {
+        title: "New member",
+        body: `${profile?.name ?? "Someone"} just joined the group`,
+        url: `/group/${data.group_id}`,
+      },
+      user.id
+    ).catch(console.error);
+  }
 
-  redirect(`/group/${groupId}`);
+  redirect(`/group/${data.group_id}`);
 }

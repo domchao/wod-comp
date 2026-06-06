@@ -11,7 +11,7 @@ export default async function InvitePage({ params }: { params: Promise<{ code: s
 
   if (!user) redirect(`/?next=/invite/${encodeURIComponent(code)}`);
 
-  const { data: groupId, error } = await supabase.rpc("join_group_by_invite_code", {
+  const { data, error } = await supabase.rpc("join_group_by_invite_code", {
     p_invite_code: code.toLowerCase(),
   });
 
@@ -20,21 +20,23 @@ export default async function InvitePage({ params }: { params: Promise<{ code: s
     redirect("/dashboard");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("name")
-    .eq("id", user.id)
-    .single();
+  if (data.newly_joined) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", user.id)
+      .single();
 
-  sendPushToGroupMembers(
-    groupId,
-    {
-      title: "New member",
-      body: `${profile?.name ?? "Someone"} just joined the group`,
-      url: `/group/${groupId}`,
-    },
-    user.id
-  ).catch(console.error);
+    sendPushToGroupMembers(
+      data.group_id,
+      {
+        title: "New member",
+        body: `${profile?.name ?? "Someone"} just joined the group`,
+        url: `/group/${data.group_id}`,
+      },
+      user.id
+    ).catch(console.error);
+  }
 
-  redirect(`/group/${groupId}`);
+  redirect(`/group/${data.group_id}`);
 }
