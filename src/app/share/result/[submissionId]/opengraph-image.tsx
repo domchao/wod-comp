@@ -113,6 +113,9 @@ export default async function Image({ params }: { params: Promise<{ submissionId
   const score = formatValue(typed.value, workout.metric_type);
   const weekLabel = formatWeekLabel(workout.week_start_date);
 
+  const glowColors: Record<number, string> = { 1: "#f59e0b", 2: "#94a3b8", 3: "#cd7c0e" };
+  const glowColor = glowColors[position] ?? "#52525b";
+
   return new ImageResponse(
     <div
       style={{
@@ -122,21 +125,52 @@ export default async function Image({ params }: { params: Promise<{ submissionId
         flexDirection: "column",
         background: "#09090b",
         fontFamily: "system-ui, sans-serif",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
+      {/* Top accent bar */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: 4,
+          background: positionColor,
+          display: "flex",
+        }}
+      />
+
+      {/* Radial glow behind body */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          width: 600,
+          height: 600,
+          borderRadius: "50%",
+          background: glowColor,
+          opacity: 0.09,
+          filter: "blur(120px)",
+          transform: "translate(-50%, -50%)",
+          display: "flex",
+        }}
+      />
+
       {/* Header */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "32px 48px 28px",
-          borderBottom: "1px solid #27272a",
+          padding: "36px 48px 28px",
         }}
       >
         <span
           style={{
-            fontSize: 24,
+            fontSize: 22,
             fontWeight: 800,
             color: "#fafafa",
             letterSpacing: "-0.5px",
@@ -144,7 +178,7 @@ export default async function Image({ params }: { params: Promise<{ submissionId
         >
           WOD COMP
         </span>
-        <span style={{ fontSize: 16, color: "#52525b", fontWeight: 500 }}>{groupName}</span>
+        <span style={{ fontSize: 15, color: "#52525b", fontWeight: 500 }}>{groupName}</span>
       </div>
 
       {/* Body */}
@@ -158,7 +192,19 @@ export default async function Image({ params }: { params: Promise<{ submissionId
           gap: 0,
         }}
       >
-        {medal && <div style={{ fontSize: 80, lineHeight: 1, marginBottom: 16 }}>{medal}</div>}
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color: "#52525b",
+            letterSpacing: "3px",
+            marginBottom: 16,
+          }}
+        >
+          MY RESULT
+        </div>
+
+        {medal && <div style={{ fontSize: 120, lineHeight: 1, marginBottom: 16 }}>{medal}</div>}
 
         <div
           style={{
@@ -167,23 +213,30 @@ export default async function Image({ params }: { params: Promise<{ submissionId
             color: "#fafafa",
             letterSpacing: "-1.5px",
             lineHeight: 1,
-            marginBottom: 12,
+            marginBottom: 20,
             textTransform: "uppercase",
           }}
         >
           {userName}
         </div>
 
+        {/* Position pill badge */}
         <div
           style={{
-            fontSize: 24,
-            fontWeight: 600,
-            color: positionColor,
-            marginBottom: 24,
-            letterSpacing: "0.5px",
+            display: "flex",
+            alignItems: "center",
+            background: `${positionColor}22`,
+            border: `1px solid ${positionColor}55`,
+            borderRadius: 100,
+            padding: "6px 20px",
+            marginBottom: 28,
           }}
         >
-          {positionLabel}
+          <span
+            style={{ fontSize: 18, fontWeight: 700, color: positionColor, letterSpacing: "0.5px" }}
+          >
+            {positionLabel}
+          </span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -223,10 +276,10 @@ export default async function Image({ params }: { params: Promise<{ submissionId
           alignItems: "center",
           justifyContent: "center",
           padding: "24px 48px 32px",
-          borderTop: "1px solid #27272a",
+          borderTop: "1px solid #1c1c1f",
         }}
       >
-        <span style={{ fontSize: 18, color: "#71717a" }}>
+        <span style={{ fontSize: 17, color: "#52525b" }}>
           {workout.title}
           <span style={{ color: "#3f3f46", margin: "0 12px" }}>·</span>
           Week of {weekLabel}

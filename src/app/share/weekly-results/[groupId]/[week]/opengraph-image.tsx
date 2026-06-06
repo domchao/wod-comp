@@ -178,7 +178,7 @@ export default async function Image({
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          padding: "0 48px",
+          padding: "0 40px",
           justifyContent: "center",
         }}
       >
@@ -189,16 +189,18 @@ export default async function Image({
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              padding: i === 0 ? "14px 0 12px" : "10px 0",
-              borderBottom: i < top3.length - 1 ? "1px solid #18181b" : "none",
+              padding: i === 0 ? "12px 12px" : "10px 12px",
+              borderRadius: 8,
+              marginBottom: i < top3.length - 1 ? 4 : 0,
+              background: i === 0 ? "rgba(245,158,11,0.08)" : "transparent",
             }}
           >
             <div style={{ display: "flex", alignItems: "center" }}>
-              <span style={{ fontSize: 28, width: 44 }}>{MEDALS[i]}</span>
+              <span style={{ fontSize: 36, width: 52 }}>{MEDALS[i]}</span>
               <span
                 style={{
-                  fontSize: i === 0 ? 30 : 24,
-                  fontWeight: i === 0 ? 700 : 500,
+                  fontSize: i === 0 ? 32 : 26,
+                  fontWeight: i === 0 ? 800 : 500,
                   color: i === 0 ? "#fafafa" : "#d4d4d8",
                   marginLeft: 8,
                 }}
@@ -223,7 +225,7 @@ export default async function Image({
             </div>
             <span
               style={{
-                fontSize: i === 0 ? 26 : 22,
+                fontSize: i === 0 ? 28 : 22,
                 fontWeight: 600,
                 color: i === 0 ? "#f59e0b" : "#71717a",
                 fontVariantNumeric: "tabular-nums",
@@ -235,17 +237,18 @@ export default async function Image({
         ))}
       </div>
 
-      {/* 4th place and beyond */}
-      {rest.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            padding: "14px 48px 24px",
-            borderTop: "1px solid #27272a",
-            flexWrap: "wrap",
-          }}
-        >
+      {/* Footer: 4th+ and participant count */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "14px 52px 24px",
+          borderTop: "1px solid #27272a",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", flexWrap: "wrap", flex: 1 }}>
           {rest.map((sub, i) => (
             <span
               key={sub.user_id}
@@ -262,7 +265,10 @@ export default async function Image({
             </span>
           ))}
         </div>
-      )}
+        <span style={{ fontSize: 14, color: "#3f3f46", whiteSpace: "nowrap" }}>
+          {sorted.length} {sorted.length === 1 ? "athlete" : "athletes"} competed
+        </span>
+      </div>
     </div>,
     { ...size }
   );
