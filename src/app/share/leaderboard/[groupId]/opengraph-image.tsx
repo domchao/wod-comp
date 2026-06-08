@@ -44,20 +44,13 @@ function Fallback({ groupName }: { groupName?: string | null }) {
   );
 }
 
-export default async function Image({
-  params,
-}: {
-  params: Promise<{ groupId: string }>;
-}) {
+export default async function Image({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const supabase = anonClient();
 
   const [{ data: group }, { data: workoutsRaw }] = await Promise.all([
     supabase.from("groups").select("name, timezone").eq("id", groupId).single(),
-    supabase
-      .from("workouts")
-      .select("id, metric_type, week_start_date")
-      .eq("group_id", groupId),
+    supabase.from("workouts").select("id, metric_type, week_start_date").eq("group_id", groupId),
   ]);
 
   if (!group) {
@@ -136,9 +129,7 @@ export default async function Image({
           {group.name && (
             <>
               <span style={{ color: "#3f3f46", margin: "0 12px", fontSize: 22 }}>·</span>
-              <span style={{ fontSize: 20, color: "#71717a", fontWeight: 500 }}>
-                {group.name}
-              </span>
+              <span style={{ fontSize: 20, color: "#71717a", fontWeight: 500 }}>{group.name}</span>
             </>
           )}
         </div>
@@ -243,9 +234,7 @@ export default async function Image({
               }}
             >
               {i + 4}.{" "}
-              <span style={{ color: "#71717a" }}>
-                {profileMap.get(entry.user_id) ?? "Unknown"}
-              </span>{" "}
+              <span style={{ color: "#71717a" }}>{profileMap.get(entry.user_id) ?? "Unknown"}</span>{" "}
               <span style={{ color: "#3f3f46" }}>{entry.points} pts</span>
             </span>
           ))}
