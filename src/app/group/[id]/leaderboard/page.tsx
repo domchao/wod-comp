@@ -63,8 +63,22 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ id
         >
           ← {group.name}
         </Link>
-        <h1 className="text-2xl font-bold">Leaderboard</h1>
-        <p className="text-sm text-zinc-500 mt-1">All-time standings</p>
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Leaderboard</h1>
+            <p className="text-sm text-zinc-500 mt-1">All-time standings</p>
+          </div>
+          {leaderboard.length > 0 && (
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`${group.name} all-time leaderboard 🏆\n${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/share/leaderboard/${id}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 mb-1"
+            >
+              Share leaderboard
+            </a>
+          )}
+        </div>
       </div>
 
       {leaderboard.length === 0 ? (
