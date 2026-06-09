@@ -17,7 +17,7 @@ const METRIC_OPTIONS = [
   { value: "time", label: "For time", hint: "lower is better" },
   { value: "reps", label: "Max reps", hint: "higher is better" },
   { value: "weight", label: "Max weight", hint: "higher is better" },
-  { value: "rounds", label: "AMRAP", hint: "rounds + reps" },
+  { value: "rounds", label: "Rounds and Reps", hint: "AMRAP — rounds + reps" },
 ];
 
 export function EditWorkoutForm({ groupId, workout }: { groupId: string; workout: Workout }) {

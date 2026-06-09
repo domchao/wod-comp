@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { sortSubmissions, formatValue } from "@/lib/submissions";
+import {
+  sortSubmissions,
+  formatValue,
+  encodeRoundsReps,
+  decodeRoundsReps,
+} from "@/lib/submissions";
 
 const make = (value: number, rx = false) => ({ value, rx });
 
@@ -32,8 +37,25 @@ describe("sortSubmissions", () => {
 
   describe("rounds metric", () => {
     it("sorts descending — more rounds ranks higher", () => {
-      const result = sortSubmissions([make(4), make(6), make(5)], "rounds");
-      expect(result.map((s) => s.value)).toEqual([6, 5, 4]);
+      const a = encodeRoundsReps(4, 0);
+      const b = encodeRoundsReps(6, 0);
+      const c = encodeRoundsReps(5, 0);
+      const result = sortSubmissions([make(a), make(b), make(c)], "rounds");
+      expect(result.map((s) => s.value)).toEqual([b, c, a]);
+    });
+
+    it("ranks more rounds over more reps in same fewer-round score", () => {
+      const lessRounds = encodeRoundsReps(4, 99);
+      const moreRounds = encodeRoundsReps(5, 0);
+      const [first] = sortSubmissions([make(lessRounds), make(moreRounds)], "rounds");
+      expect(first.value).toBe(moreRounds);
+    });
+
+    it("breaks ties in rounds by reps", () => {
+      const fewerReps = encodeRoundsReps(5, 3);
+      const moreReps = encodeRoundsReps(5, 7);
+      const [first] = sortSubmissions([make(fewerReps), make(moreReps)], "rounds");
+      expect(first.value).toBe(moreReps);
     });
   });
 
@@ -98,11 +120,31 @@ describe("formatValue", () => {
     expect(formatValue(100, "weight")).toBe("100 kg");
   });
 
-  it("appends 'rounds' for rounds metric", () => {
-    expect(formatValue(5, "rounds")).toBe("5 rounds");
+  describe("rounds metric", () => {
+    it("formats rounds with zero reps as 'N rounds'", () => {
+      expect(formatValue(encodeRoundsReps(5, 0), "rounds")).toBe("5 rounds");
+    });
+
+    it("formats rounds and reps as 'N rounds + M reps'", () => {
+      expect(formatValue(encodeRoundsReps(3, 6), "rounds")).toBe("3 rounds + 6 reps");
+    });
   });
 
   it("returns the raw value as a string for an unknown metric", () => {
     expect(formatValue(99, "unknown")).toBe("99");
+  });
+});
+
+describe("encodeRoundsReps / decodeRoundsReps", () => {
+  it("round-trips rounds and reps", () => {
+    expect(decodeRoundsReps(encodeRoundsReps(3, 6))).toEqual({ rounds: 3, reps: 6 });
+    expect(decodeRoundsReps(encodeRoundsReps(10, 0))).toEqual({ rounds: 10, reps: 0 });
+    expect(decodeRoundsReps(encodeRoundsReps(0, 15))).toEqual({ rounds: 0, reps: 15 });
+  });
+
+  it("preserves correct sort order: more rounds beats more reps", () => {
+    const fiveRoundsMax = encodeRoundsReps(5, 9999);
+    const sixRoundsZero = encodeRoundsReps(6, 0);
+    expect(sixRoundsZero).toBeGreaterThan(fiveRoundsMax);
   });
 });
