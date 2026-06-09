@@ -19,9 +19,13 @@ function getInitialPushState(): State {
   return "idle";
 }
 
+const DISMISSED_KEY = "push-prompt-dismissed";
+
 export function PushNotificationPrompt() {
   const [state, setState] = useState<State>(getInitialPushState);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem(DISMISSED_KEY) === "1"
+  );
 
   useEffect(() => {
     if (state !== "idle") return;
@@ -76,13 +80,18 @@ export function PushNotificationPrompt() {
             </p>
             <div className="flex gap-2 mt-3">
               <button
+                type="button"
                 onClick={enable}
                 className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-1.5 px-3 rounded-lg transition-colors"
               >
                 Enable
               </button>
               <button
-                onClick={() => setDismissed(true)}
+                type="button"
+                onClick={() => {
+                  localStorage.setItem(DISMISSED_KEY, "1");
+                  setDismissed(true);
+                }}
                 className="flex-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 py-1.5 px-3 rounded-lg border border-gray-200 dark:border-zinc-600 transition-colors"
               >
                 Not now
