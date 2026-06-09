@@ -159,6 +159,10 @@ export default async function GroupPage({
     currentWorkout?.metric_type ?? ""
   );
   const mySubmission = rankedSubmissions.find((s) => s.user_id === user.id);
+  const submittedUserIds = new Set(rankedSubmissions.map((s) => s.user_id));
+  const nonSubmittedMembers = currentWorkout
+    ? members.filter((m) => !submittedUserIds.has(m.profiles.id))
+    : [];
   const typedComments = (comments ?? []) as unknown as Comment[];
 
   return (
@@ -350,6 +354,37 @@ export default async function GroupPage({
                 </li>
               ))}
             </ol>
+          )}
+          {isAdmin && nonSubmittedMembers.length > 0 && (
+            <div className="pt-2 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                No result logged
+              </p>
+              <ul className="space-y-2">
+                {nonSubmittedMembers.map((member) => (
+                  <li
+                    key={member.profiles.id}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-6" />
+                      <Avatar
+                        src={member.profiles.avatar_url}
+                        name={member.profiles.name}
+                        size="sm"
+                      />
+                      <span className="text-zinc-400">{member.profiles.name}</span>
+                    </div>
+                    <Link
+                      href={`/group/${id}/workout/${currentWorkout.id}/add-result?userId=${member.profiles.id}`}
+                      className="text-xs text-zinc-400 underline hover:text-zinc-600"
+                    >
+                      Add result
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       )}
