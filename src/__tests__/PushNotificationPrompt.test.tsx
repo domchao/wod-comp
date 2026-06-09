@@ -46,6 +46,7 @@ function stubPushSupport({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
   // Valid base64url VAPID public key so urlBase64ToUint8Array doesn't throw
   vi.stubEnv(
     "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
@@ -55,6 +56,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  localStorage.clear();
   delete (window as unknown as Record<string, unknown>).PushManager;
 });
 
@@ -87,7 +89,7 @@ describe("PushNotificationPrompt", () => {
       });
     });
 
-    it("clicking Not now hides the prompt permanently for the session", async () => {
+    it("clicking Not now hides the prompt", async () => {
       stubPushSupport();
       const user = userEvent.setup();
       const { container } = render(<PushNotificationPrompt />);
@@ -96,6 +98,21 @@ describe("PushNotificationPrompt", () => {
       await user.click(screen.getByRole("button", { name: /not now/i }));
 
       expect(container.firstChild).toBeNull();
+    });
+
+    it("clicking Not now persists dismissal to localStorage so prompt stays hidden on reload", async () => {
+      stubPushSupport();
+      const user = userEvent.setup();
+      render(<PushNotificationPrompt />);
+
+      await waitFor(() => screen.getByRole("button", { name: /not now/i }));
+      await user.click(screen.getByRole("button", { name: /not now/i }));
+
+      expect(localStorage.getItem("push-prompt-dismissed")).toBe("1");
+
+      // Simulate a page reload by mounting a fresh instance
+      const { container: container2 } = render(<PushNotificationPrompt />);
+      expect(container2.firstChild).toBeNull();
     });
   });
 
