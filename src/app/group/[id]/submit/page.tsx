@@ -13,22 +13,25 @@ export default async function SubmitPage({ params }: { params: Promise<{ id: str
 
   if (!user) redirect("/");
 
-  const [{ data: membership }, { data: workout }] = await Promise.all([
+  const [{ data: membership }, { data: group }] = await Promise.all([
     supabase
       .from("group_members")
       .select("user_id")
       .eq("group_id", id)
       .eq("user_id", user.id)
       .maybeSingle(),
-    supabase
-      .from("workouts")
-      .select("id, title, description, metric_type")
-      .eq("group_id", id)
-      .eq("week_start_date", formatWeekStart())
-      .maybeSingle(),
+    supabase.from("groups").select("timezone").eq("id", id).single(),
   ]);
 
   if (!membership) redirect("/dashboard");
+
+  const { data: workout } = await supabase
+    .from("workouts")
+    .select("id, title, description, metric_type")
+    .eq("group_id", id)
+    .eq("week_start_date", formatWeekStart(new Date(), group?.timezone ?? "UTC"))
+    .maybeSingle();
+
   if (!workout) redirect(`/group/${id}`);
 
   const { data: existing } = await supabase

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { sendPushToGroupMembers } from "@/lib/push";
 import { randomUUID } from "crypto";
 
 export async function createGroup(_prevState: unknown, formData: FormData) {
@@ -101,7 +102,7 @@ export async function joinGroup(_prevState: unknown, formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
-  const { data: groupId, error } = await supabase.rpc("join_group_by_invite_code", {
+  const { data, error } = await supabase.rpc("join_group_by_invite_code", {
     p_invite_code: inviteCode,
   });
 
@@ -110,5 +111,23 @@ export async function joinGroup(_prevState: unknown, formData: FormData) {
     return { error: error.message };
   }
 
-  redirect(`/group/${groupId}`);
+  if (data.newly_joined) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", user.id)
+      .single();
+
+    sendPushToGroupMembers(
+      data.group_id,
+      {
+        title: "New member",
+        body: `${profile?.name ?? "Someone"} just joined the group`,
+        url: `/group/${data.group_id}`,
+      },
+      user.id
+    ).catch(console.error);
+  }
+
+  redirect(`/group/${data.group_id}`);
 }

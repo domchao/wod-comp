@@ -10,14 +10,15 @@ vi.mock("@/lib/rotation", () => ({
   getWeekSetter: vi.fn(),
   formatWeekStart: vi.fn().mockReturnValue("2026-05-18"),
 }));
+vi.mock("@/lib/push", () => ({ sendPushToGroupMembers: vi.fn().mockResolvedValue(undefined) }));
 
 const USER_ID = "user-1";
 const ADMIN_ID = "admin-1";
 const GROUP_ID = "group-1";
 
 const mockGroupMembers = [
-  { user_id: USER_ID, joined_at: "2026-01-01T00:00:00Z" },
-  { user_id: ADMIN_ID, joined_at: "2026-01-02T00:00:00Z" },
+  { user_id: USER_ID, rotation_order: 0 },
+  { user_id: ADMIN_ID, rotation_order: 1 },
 ];
 
 function buildStorageMock(uploadError: string | null = null) {
@@ -36,6 +37,7 @@ function buildSupabaseMock({
   workoutExists = false,
   insertError = null as string | null,
   uploadError = null as string | null,
+  setterOverrideUserId = null as string | null,
 } = {}) {
   return {
     auth: {
@@ -47,7 +49,21 @@ function buildSupabaseMock({
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({
-            data: { admin_user_id: ADMIN_ID, group_members: mockGroupMembers },
+            data: {
+              admin_user_id: ADMIN_ID,
+              timezone: "UTC",
+              group_members: mockGroupMembers,
+            },
+            error: null,
+          }),
+        };
+      }
+      if (table === "setter_overrides") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: setterOverrideUserId ? { user_id: setterOverrideUserId } : null,
             error: null,
           }),
         };
@@ -62,6 +78,13 @@ function buildSupabaseMock({
           insert: vi
             .fn()
             .mockResolvedValue({ error: insertError ? { message: insertError } : null }),
+        };
+      }
+      if (table === "profiles") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { name: "Test User" }, error: null }),
         };
       }
       return {};
@@ -151,7 +174,9 @@ describe("createWorkout", () => {
 
   it("returns an error when a workout already exists for this week", async () => {
     vi.mocked(getWeekSetter).mockReturnValue(USER_ID);
-    vi.mocked(createClient).mockResolvedValue(buildSupabaseMock({ workoutExists: true }) as never);
+    vi.mocked(createClient).mockResolvedValue(
+      buildSupabaseMock({ workoutExists: true, setterOverrideUserId: null }) as never
+    );
 
     const result = await createWorkout(null, makeCreateFormData());
     expect(result).toEqual({ error: "A workout has already been posted for this week" });
@@ -193,6 +218,42 @@ describe("createWorkout", () => {
     const result = await createWorkout(null, fd);
     expect(result).toEqual({ error: "Photo upload failed: Storage quota exceeded" });
     expect(vi.mocked(redirect)).not.toHaveBeenCalled();
+  });
+});
+
+describe("createWorkout — setter override", () => {
+  it("allows the override user to post even when they are not the natural setter", async () => {
+    vi.mocked(getWeekSetter).mockReturnValue("someone-else");
+    vi.mocked(createClient).mockResolvedValue(
+      buildSupabaseMock({ setterOverrideUserId: USER_ID }) as never
+    );
+
+    await expect(createWorkout(null, makeCreateFormData())).rejects.toThrow("redirect");
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/group/${GROUP_ID}`);
+  });
+
+  it("blocks the natural setter when an override assigns someone else", async () => {
+    vi.mocked(getWeekSetter).mockReturnValue(USER_ID); // user is natural setter
+    vi.mocked(createClient).mockResolvedValue(
+      buildSupabaseMock({ setterOverrideUserId: "override-user" }) as never // but override points elsewhere
+    );
+
+    const result = await createWorkout(null, makeCreateFormData());
+    expect(result).toEqual({ error: "It's not your turn to set the workout this week" });
+    expect(vi.mocked(redirect)).not.toHaveBeenCalled();
+  });
+
+  it("still allows admin to post regardless of the override", async () => {
+    vi.mocked(getWeekSetter).mockReturnValue(USER_ID);
+    vi.mocked(createClient).mockResolvedValue({
+      ...buildSupabaseMock({ setterOverrideUserId: "override-user" }),
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: ADMIN_ID } } }),
+      },
+    } as never);
+
+    await expect(createWorkout(null, makeCreateFormData())).rejects.toThrow("redirect");
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/group/${GROUP_ID}`);
   });
 });
 

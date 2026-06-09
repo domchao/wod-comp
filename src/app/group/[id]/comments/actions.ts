@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { sendPushToGroupMembers } from "@/lib/push";
 
 type CommentState = { error: string } | { success: true } | null;
 
@@ -28,6 +29,22 @@ export async function addComment(
     .insert({ workout_id: workoutId, user_id: user.id, body });
 
   if (error) return { error: error.message };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name")
+    .eq("id", user.id)
+    .single();
+
+  sendPushToGroupMembers(
+    groupId,
+    {
+      title: "New comment",
+      body: `${profile?.name ?? "Someone"} commented on this week's workout`,
+      url: `/group/${groupId}`,
+    },
+    user.id
+  ).catch(console.error);
 
   revalidatePath(`/group/${groupId}`);
   return { success: true };

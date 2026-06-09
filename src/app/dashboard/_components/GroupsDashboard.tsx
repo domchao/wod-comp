@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { createGroup, joinGroup } from "@/app/groups/actions";
-import { signOut } from "@/app/auth/actions";
+import { DashboardMenu } from "./DashboardMenu";
 
 type State = { error: string } | null;
 
@@ -20,11 +20,7 @@ export function GroupsDashboard({ groups }: { groups: Group[] }) {
     <main className="mx-auto max-w-lg px-4 py-6 sm:px-6 space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Your groups</h1>
-        <form action={signOut}>
-          <button type="submit" className="text-sm text-zinc-500 underline hover:text-zinc-900">
-            Sign out
-          </button>
-        </form>
+        <DashboardMenu />
       </div>
 
       <ul className="space-y-2">

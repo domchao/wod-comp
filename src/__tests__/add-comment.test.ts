@@ -3,10 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { addComment } from "@/app/group/[id]/comments/actions";
+import { sendPushToGroupMembers } from "@/lib/push";
 
 vi.mock("@/lib/supabase/server");
 vi.mock("next/cache");
 vi.mock("next/navigation");
+vi.mock("@/lib/push", () => ({ sendPushToGroupMembers: vi.fn().mockResolvedValue(undefined) }));
 
 const USER_ID = "user-1";
 const WORKOUT_ID = "workout-1";
@@ -17,9 +19,23 @@ function buildSupabaseMock({ insertError = null as string | null } = {}) {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }),
     },
-    from: vi.fn().mockImplementation(() => ({
-      insert: vi.fn().mockResolvedValue({ error: insertError ? { message: insertError } : null }),
-    })),
+    from: vi.fn().mockImplementation((table: string) => {
+      if (table === "comments") {
+        return {
+          insert: vi
+            .fn()
+            .mockResolvedValue({ error: insertError ? { message: insertError } : null }),
+        };
+      }
+      if (table === "profiles") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { name: "Test User" } }),
+        };
+      }
+      return {};
+    }),
   };
 }
 
@@ -46,6 +62,20 @@ describe("addComment", () => {
 
     expect(result).toEqual({ success: true });
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith(`/group/${GROUP_ID}`);
+  });
+
+  it("sends a push notification to group members excluding the commenter", async () => {
+    await addComment(null, makeFormData());
+
+    expect(vi.mocked(sendPushToGroupMembers)).toHaveBeenCalledWith(
+      GROUP_ID,
+      expect.objectContaining({
+        title: "New comment",
+        body: expect.stringContaining("Test User"),
+        url: `/group/${GROUP_ID}`,
+      }),
+      USER_ID
+    );
   });
 
   it("returns an error when the body is empty", async () => {
@@ -79,5 +109,10 @@ describe("addComment", () => {
   it("does not revalidate when validation fails", async () => {
     await addComment(null, makeFormData({ body: "" }));
     expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled();
+  });
+
+  it("does not send a push when validation fails", async () => {
+    await addComment(null, makeFormData({ body: "" }));
+    expect(vi.mocked(sendPushToGroupMembers)).not.toHaveBeenCalled();
   });
 });

@@ -13,6 +13,8 @@ import { InviteSection } from "./_components/InviteSection";
 import { Avatar } from "@/app/_components/Avatar";
 import { SetterPicker } from "./_components/SetterPicker";
 
+const MEDAL: Record<number, string> = { 0: "🥇", 1: "🥈", 2: "🥉" };
+
 const METRIC_LABELS: Record<string, string> = {
   time: "For time",
   reps: "Max reps",
@@ -33,53 +35,56 @@ export default async function GroupPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/");
+  if (!user) {
+    const sp = await searchParams;
+    const weekParam = typeof sp.week === "string" ? `?week=${sp.week}` : "";
+    redirect(`/?next=${encodeURIComponent(`/group/${id}${weekParam}`)}`);
+  }
 
-  const todayWeekStr = formatWeekStart();
+  const { data: group } = await supabase
+    .from("groups")
+    .select(
+      `id, name, invite_code, admin_user_id, timezone,
+       group_members(joined_at, rotation_order, profiles(id, name, avatar_url))`
+    )
+    .eq("id", id)
+    .single();
+
+  if (!group) redirect("/dashboard");
+
+  const todayWeekStr = formatWeekStart(new Date(), group.timezone ?? "UTC");
   const rawWeek = (await searchParams).week;
   const requestedWeek = typeof rawWeek === "string" ? rawWeek : todayWeekStr;
   // Clamp to current week — don't allow viewing future weeks
   const effectiveWeek = requestedWeek > todayWeekStr ? todayWeekStr : requestedWeek;
   const isCurrentWeek = effectiveWeek === todayWeekStr;
 
-  const [
-    { data: group },
-    { data: currentWorkout },
-    { data: allWorkoutWeeks },
-    { data: setterOverride },
-  ] = await Promise.all([
-    supabase
-      .from("groups")
-      .select(
-        `id, name, invite_code, admin_user_id,
-         group_members(joined_at, profiles(id, name, avatar_url))`
-      )
-      .eq("id", id)
-      .single(),
-    supabase
-      .from("workouts")
-      .select("id, title, description, metric_type, photo_url")
-      .eq("group_id", id)
-      .eq("week_start_date", effectiveWeek)
-      .maybeSingle(),
-    supabase
-      .from("workouts")
-      .select("week_start_date")
-      .eq("group_id", id)
-      .order("week_start_date", { ascending: true }),
-    supabase
-      .from("setter_overrides")
-      .select("user_id")
-      .eq("group_id", id)
-      .eq("week_start_date", effectiveWeek)
-      .maybeSingle(),
-  ]);
-
-  if (!group) redirect("/dashboard");
+  const [{ data: currentWorkout }, { data: allWorkoutWeeks }, { data: setterOverride }] =
+    await Promise.all([
+      supabase
+        .from("workouts")
+        .select("id, title, description, metric_type, photo_url")
+        .eq("group_id", id)
+        .eq("week_start_date", effectiveWeek)
+        .maybeSingle(),
+      supabase
+        .from("workouts")
+        .select("week_start_date")
+        .eq("group_id", id)
+        .order("week_start_date", { ascending: true }),
+      supabase
+        .from("setter_overrides")
+        .select("user_id")
+        .eq("group_id", id)
+        .eq("week_start_date", effectiveWeek)
+        .maybeSingle(),
+    ]);
 
   const sortedWeeks = (allWorkoutWeeks ?? []).map((w) => w.week_start_date).sort();
   const prevWeek = sortedWeeks.filter((w) => w < effectiveWeek).at(-1) ?? null;
-  const nextWeek = sortedWeeks.filter((w) => w > effectiveWeek && w <= todayWeekStr)[0] ?? null;
+  const nextWeek =
+    sortedWeeks.filter((w) => w > effectiveWeek && w <= todayWeekStr)[0] ??
+    (effectiveWeek < todayWeekStr ? todayWeekStr : null);
 
   const [{ data: submissions }, { data: comments }, { data: reactionRows }] = currentWorkout
     ? await Promise.all([
@@ -104,14 +109,16 @@ export default async function GroupPage({
   const members = (
     group.group_members as unknown as {
       joined_at: string;
+      rotation_order: number;
       profiles: { id: string; name: string; avatar_url: string | null };
     }[]
-  ).sort((a, b) => new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime());
+  ).sort((a, b) => a.rotation_order - b.rotation_order);
 
   const [effY, effM, effD] = effectiveWeek.split("-").map(Number);
   const naturalSetterId = getWeekSetter(
-    members.map((m) => ({ id: m.profiles.id, joined_at: m.joined_at })),
-    new Date(effY, effM - 1, effD)
+    members.map((m) => ({ id: m.profiles.id, rotation_order: m.rotation_order })),
+    new Date(Date.UTC(effY, effM - 1, effD)),
+    group.timezone ?? "UTC"
   );
   const isOverridden = setterOverride?.user_id != null;
   const setterId = setterOverride?.user_id ?? naturalSetterId;
@@ -233,6 +240,14 @@ export default async function GroupPage({
                 )}
               </div>
             )}
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`This week's WOD Comp workout 🏋️\n${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/share/workout/${currentWorkout.id}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+            >
+              Share workout
+            </a>
           </div>
         ) : isCurrentWeek ? (
           canPost ? (
@@ -252,9 +267,21 @@ export default async function GroupPage({
 
       {currentWorkout && (
         <div className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            Leaderboard
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Leaderboard
+            </h2>
+            {rankedSubmissions.length > 0 && (
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`WOD Comp results 🏆\n${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/share/weekly-results/${id}/${effectiveWeek}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+              >
+                Share results
+              </a>
+            )}
+          </div>
           {rankedSubmissions.length === 0 ? (
             <p className="text-sm text-zinc-400">No results yet — be the first to log yours.</p>
           ) : (
@@ -263,7 +290,9 @@ export default async function GroupPage({
                 <li key={submission.user_id} className="space-y-1.5">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-zinc-400 w-4">{i + 1}</span>
+                      <span className="w-6 text-center text-base">
+                        {MEDAL[i] ?? <span className="text-xs text-zinc-400">{i + 1}</span>}
+                      </span>
                       <Avatar
                         src={submission.profiles.avatar_url}
                         name={submission.profiles.name}
@@ -306,6 +335,18 @@ export default async function GroupPage({
                       reactions={submission.reactions}
                     />
                   </div>
+                  {submission.user_id === user.id && (
+                    <div className="pl-6">
+                      <a
+                        href={`https://wa.me/?text=${encodeURIComponent(`Check out my WOD Comp result 💪\n${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/share/result/${submission.id}`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                      >
+                        Share my result
+                      </a>
+                    </div>
+                  )}
                 </li>
               ))}
             </ol>

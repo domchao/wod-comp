@@ -114,20 +114,20 @@ describe("SetterPicker", () => {
   });
 
   describe("manual override badge", () => {
-    it("does not show the manual badge when not overridden", () => {
+    it("does not show the revert button when not overridden", () => {
       renderPicker({ isOverridden: false });
-      expect(screen.queryByRole("button", { name: /manual/i })).toBeNull();
+      expect(screen.queryByRole("button", { name: /revert/i })).toBeNull();
     });
 
-    it("shows the manual badge when isOverridden is true", () => {
+    it("shows the revert button when isOverridden is true", () => {
       renderPicker({ isOverridden: true });
-      expect(screen.getByRole("button", { name: /manual/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /revert/i })).toBeInTheDocument();
     });
 
     it("calls clearSetterOverride when the manual badge is clicked", async () => {
       const user = userEvent.setup();
       renderPicker({ isOverridden: true });
-      await user.click(screen.getByRole("button", { name: /manual/i }));
+      await user.click(screen.getByRole("button", { name: /revert/i }));
       await waitFor(() =>
         expect(vi.mocked(clearSetterOverride)).toHaveBeenCalledWith(GROUP_ID, WEEK)
       );
@@ -137,7 +137,7 @@ describe("SetterPicker", () => {
       vi.mocked(clearSetterOverride).mockResolvedValue({ error: "not admin" });
       const user = userEvent.setup();
       renderPicker({ isOverridden: true });
-      await user.click(screen.getByRole("button", { name: /manual/i }));
+      await user.click(screen.getByRole("button", { name: /revert/i }));
       await waitFor(() => expect(screen.getByText(/not admin/i)).toBeInTheDocument());
     });
   });
