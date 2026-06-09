@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { sendPushToGroupMembers } from "@/lib/push";
+import { encodeRoundsReps } from "@/lib/submissions";
 
 export async function submitResult(_prevState: unknown, formData: FormData) {
   const groupId = formData.get("group_id") as string;
@@ -12,6 +13,8 @@ export async function submitResult(_prevState: unknown, formData: FormData) {
 
   const rawMinutes = formData.get("minutes") as string | null;
   const rawSeconds = formData.get("seconds") as string | null;
+  const rawRoundsCount = formData.get("rounds_count") as string | null;
+  const rawRepsCount = formData.get("reps_count") as string | null;
   const rawValue = formData.get("value") as string | null;
 
   let value: number;
@@ -22,6 +25,13 @@ export async function submitResult(_prevState: unknown, formData: FormData) {
       return { error: "Please enter a valid time" };
     }
     value = mins * 60 + secs;
+  } else if (rawRoundsCount !== null && rawRepsCount !== null) {
+    const rounds = parseInt(rawRoundsCount, 10);
+    const reps = parseInt(rawRepsCount, 10);
+    if (isNaN(rounds) || isNaN(reps) || rounds < 0 || reps < 0) {
+      return { error: "Please enter a valid result" };
+    }
+    value = encodeRoundsReps(rounds, reps);
   } else {
     value = parseFloat(rawValue ?? "");
     if (isNaN(value) || value < 0) return { error: "Please enter a valid result" };

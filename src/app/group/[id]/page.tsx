@@ -19,7 +19,7 @@ const METRIC_LABELS: Record<string, string> = {
   time: "For time",
   reps: "Max reps",
   weight: "Max weight",
-  rounds: "AMRAP",
+  rounds: "AMRAP — Rounds and Reps",
 };
 
 export default async function GroupPage({
