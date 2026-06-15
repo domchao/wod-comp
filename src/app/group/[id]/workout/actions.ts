@@ -101,6 +101,7 @@ export async function createWorkout(_prevState: unknown, formData: FormData) {
     metric_type: metricType,
     week_start_date: weekStart,
     photo_url: photoUrl,
+    created_by: user.id,
   });
 
   if (error) return { error: error.message };
