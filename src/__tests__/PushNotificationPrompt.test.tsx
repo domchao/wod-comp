@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PushNotificationPrompt } from "@/app/_components/PushNotificationPrompt";
 import { subscribeUser } from "@/app/notifications/actions";
@@ -55,6 +55,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
   localStorage.clear();
@@ -204,6 +205,23 @@ describe("PushNotificationPrompt", () => {
       // Simulate a page reload — prompt should stay gone
       const { container: container2 } = render(<PushNotificationPrompt />);
       expect(container2.firstChild).toBeNull();
+    });
+  });
+
+  describe("auto-dismiss", () => {
+    it("hides and persists dismissal after the timeout elapses", async () => {
+      vi.useFakeTimers();
+      stubPushSupport();
+      // render() wraps in act and flushes effects, registering the setTimeout
+      render(<PushNotificationPrompt />);
+
+      // Fire the auto-dismiss timer and flush the resulting React state update
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+      });
+
+      expect(screen.queryByRole("button", { name: /not now/i })).toBeNull();
+      expect(localStorage.getItem("push-prompt-dismissed")).toBe("1");
     });
   });
 
