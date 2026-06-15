@@ -33,6 +33,7 @@ export function AdminAddResultForm({
   const [state, action, pending] = useActionState<State, FormData>(adminCreateSubmission, null);
   const [rx, setRx] = useState(false);
   const isTime = workout.metric_type === "time";
+  const isRoundsAndReps = workout.metric_type === "rounds";
   const metric = METRIC_CONFIG[workout.metric_type];
 
   return (
@@ -85,6 +86,43 @@ export function AdminAddResultForm({
                 step="1"
                 defaultValue={0}
                 placeholder="00"
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+              />
+            </div>
+          </div>
+        </div>
+      ) : isRoundsAndReps ? (
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Score</p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 space-y-1">
+              <label htmlFor="rounds_count" className="text-xs text-zinc-500">
+                Rounds
+              </label>
+              <input
+                id="rounds_count"
+                name="rounds_count"
+                type="number"
+                required
+                min="0"
+                step="1"
+                placeholder="0"
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+              />
+            </div>
+            <span className="mt-5 text-zinc-400 font-medium">+</span>
+            <div className="flex-1 space-y-1">
+              <label htmlFor="reps_count" className="text-xs text-zinc-500">
+                Reps
+              </label>
+              <input
+                id="reps_count"
+                name="reps_count"
+                type="number"
+                required
+                min="0"
+                step="1"
+                placeholder="0"
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
               />
             </div>
