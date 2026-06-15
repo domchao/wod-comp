@@ -55,6 +55,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
   localStorage.clear();
   delete (window as unknown as Record<string, unknown>).PushManager;
@@ -114,6 +115,20 @@ describe("PushNotificationPrompt", () => {
       const { container: container2 } = render(<PushNotificationPrompt />);
       expect(container2.firstChild).toBeNull();
     });
+
+    it("clicking Not now still hides the prompt when localStorage.setItem throws", async () => {
+      stubPushSupport();
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new DOMException("QuotaExceededError");
+      });
+      const user = userEvent.setup();
+      const { container } = render(<PushNotificationPrompt />);
+
+      await waitFor(() => screen.getByRole("button", { name: /not now/i }));
+      await user.click(screen.getByRole("button", { name: /not now/i }));
+
+      expect(container.firstChild).toBeNull();
+    });
   });
 
   describe("subscribing", () => {
@@ -170,6 +185,25 @@ describe("PushNotificationPrompt", () => {
       await waitFor(() => {
         expect(container.firstChild).toBeNull();
       });
+    });
+
+    it("persists dismissal to localStorage when subscribe throws so prompt stays hidden on reload", async () => {
+      const { subscribe } = stubPushSupport();
+      subscribe.mockRejectedValue(new DOMException("Subscribe failed"));
+      const user = userEvent.setup();
+      const { container } = render(<PushNotificationPrompt />);
+
+      await waitFor(() => screen.getByRole("button", { name: /enable/i }));
+      await user.click(screen.getByRole("button", { name: /enable/i }));
+
+      await waitFor(() => {
+        expect(container.firstChild).toBeNull();
+        expect(localStorage.getItem("push-prompt-dismissed")).toBe("1");
+      });
+
+      // Simulate a page reload — prompt should stay gone
+      const { container: container2 } = render(<PushNotificationPrompt />);
+      expect(container2.firstChild).toBeNull();
     });
   });
 

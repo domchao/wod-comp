@@ -21,11 +21,30 @@ function getInitialPushState(): State {
 
 const DISMISSED_KEY = "push-prompt-dismissed";
 
+function saveDismissed() {
+  // localStorage can throw in private-browsing modes or when storage is full;
+  // guard so the in-memory state update always runs even if persistence fails.
+  try {
+    localStorage.setItem(DISMISSED_KEY, "1");
+  } catch {
+    // ignore
+  }
+}
+
 export function PushNotificationPrompt() {
   const [state, setState] = useState<State>(getInitialPushState);
-  const [dismissed, setDismissed] = useState(
-    () => typeof window !== "undefined" && localStorage.getItem(DISMISSED_KEY) === "1"
-  );
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return typeof window !== "undefined" && localStorage.getItem(DISMISSED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  function dismiss() {
+    saveDismissed();
+    setDismissed(true);
+  }
 
   useEffect(() => {
     if (state !== "idle") return;
@@ -59,7 +78,7 @@ export function PushNotificationPrompt() {
       setState("subscribed");
       await subscribeUser(JSON.parse(JSON.stringify(sub)));
     } catch {
-      setDismissed(true);
+      dismiss();
     }
   }
 
@@ -88,10 +107,7 @@ export function PushNotificationPrompt() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  localStorage.setItem(DISMISSED_KEY, "1");
-                  setDismissed(true);
-                }}
+                onClick={dismiss}
                 className="flex-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 py-1.5 px-3 rounded-lg border border-gray-200 dark:border-zinc-600 transition-colors"
               >
                 Not now
