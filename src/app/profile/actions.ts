@@ -1,7 +1,16 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+function adminClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 function storagePathFromUrl(url: string): string | null {
   const match = url.match(/\/storage\/v1\/object\/public\/profile-pictures\/(.+)/);
@@ -103,4 +112,31 @@ export async function deleteProfilePicture() {
 
   revalidatePath("/", "layout");
   return { success: true } as const;
+}
+
+export async function deleteProfile() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("avatar_url")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.avatar_url) {
+    const oldPath = storagePathFromUrl(profile.avatar_url);
+    if (oldPath) {
+      await supabase.storage.from("profile-pictures").remove([oldPath]);
+    }
+  }
+
+  const admin = adminClient();
+  const { error } = await admin.auth.admin.deleteUser(user.id);
+  if (error) return { error: error.message };
+
+  redirect("/");
 }

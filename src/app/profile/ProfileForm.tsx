@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateDisplayName, uploadProfilePicture, deleteProfilePicture } from "./actions";
+import { updateDisplayName, uploadProfilePicture, deleteProfilePicture, deleteProfile } from "./actions";
 import { Avatar } from "@/app/_components/Avatar";
 
 export function ProfileForm({
@@ -26,6 +26,10 @@ export function ProfileForm({
   const [avatarSuccess, setAvatarSuccess] = useState(false);
   const [isAvatarPending, startAvatarTransition] = useTransition();
   const [isDeletePending, startDeleteTransition] = useTransition();
+
+  const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+  const [isDeleteAccountPending, startDeleteAccountTransition] = useTransition();
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -165,6 +169,55 @@ export function ProfileForm({
           {isNamePending ? "Saving..." : "Save"}
         </button>
       </form>
+
+      <div className="border-t border-red-200 pt-6 dark:border-red-900">
+        <h2 className="text-sm font-medium text-red-600 dark:text-red-400 mb-3">Danger zone</h2>
+        {!confirmDeleteAccount ? (
+          <button
+            type="button"
+            onClick={() => setConfirmDeleteAccount(true)}
+            className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950"
+          >
+            Delete my account
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-zinc-700 dark:text-zinc-300">
+              This will permanently delete your account and all your data. This cannot be undone.
+            </p>
+            {deleteAccountError && (
+              <p className="text-sm text-red-600">{deleteAccountError}</p>
+            )}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                disabled={isDeleteAccountPending}
+                onClick={() => {
+                  setDeleteAccountError(null);
+                  startDeleteAccountTransition(async () => {
+                    const result = await deleteProfile();
+                    if (result && "error" in result) {
+                      setDeleteAccountError(result.error ?? null);
+                      setConfirmDeleteAccount(false);
+                    }
+                  });
+                }}
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {isDeleteAccountPending ? "Deleting..." : "Yes, delete my account"}
+              </button>
+              <button
+                type="button"
+                disabled={isDeleteAccountPending}
+                onClick={() => setConfirmDeleteAccount(false)}
+                className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
