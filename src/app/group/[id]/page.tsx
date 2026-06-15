@@ -63,7 +63,7 @@ export default async function GroupPage({
     await Promise.all([
       supabase
         .from("workouts")
-        .select("id, title, description, metric_type, photo_url")
+        .select("id, title, description, metric_type, photo_url, created_by")
         .eq("group_id", id)
         .eq("week_start_date", effectiveWeek)
         .maybeSingle(),
@@ -125,6 +125,7 @@ export default async function GroupPage({
   const setter = members.find((m) => m.profiles.id === setterId);
   const isAdmin = group.admin_user_id === user.id;
   const isMyTurn = setterId === user.id;
+  const isWorkoutCreator = currentWorkout?.created_by === user.id;
   const canPost = (isMyTurn || isAdmin) && !currentWorkout;
 
   type SubmissionRow = {
@@ -222,25 +223,25 @@ export default async function GroupPage({
                 >
                   {mySubmission ? "Update your result" : "Log your result →"}
                 </Link>
+                {(isAdmin || isWorkoutCreator) && (
+                  <Link
+                    href={`/group/${id}/workout/${currentWorkout.id}/edit`}
+                    className="text-xs text-zinc-500 underline hover:text-zinc-900"
+                  >
+                    Edit
+                  </Link>
+                )}
                 {isAdmin && (
-                  <>
-                    <Link
-                      href={`/group/${id}/workout/${currentWorkout.id}/edit`}
-                      className="text-xs text-zinc-500 underline hover:text-zinc-900"
+                  <form action={deleteWorkout}>
+                    <input type="hidden" name="workout_id" value={currentWorkout.id} />
+                    <input type="hidden" name="group_id" value={id} />
+                    <button
+                      type="submit"
+                      className="text-xs text-red-500 underline hover:text-red-700"
                     >
-                      Edit
-                    </Link>
-                    <form action={deleteWorkout}>
-                      <input type="hidden" name="workout_id" value={currentWorkout.id} />
-                      <input type="hidden" name="group_id" value={id} />
-                      <button
-                        type="submit"
-                        className="text-xs text-red-500 underline hover:text-red-700"
-                      >
-                        Delete
-                      </button>
-                    </form>
-                  </>
+                      Delete
+                    </button>
+                  </form>
                 )}
               </div>
             )}

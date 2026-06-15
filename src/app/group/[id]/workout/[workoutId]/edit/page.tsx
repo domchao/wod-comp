@@ -15,13 +15,20 @@ export default async function EditWorkoutPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
-  const { data: workout } = await supabase
-    .from("workouts")
-    .select("id, title, description, metric_type, photo_url")
-    .eq("id", workoutId)
-    .single();
+  const [{ data: workout }, { data: group }] = await Promise.all([
+    supabase
+      .from("workouts")
+      .select("id, title, description, metric_type, photo_url, created_by")
+      .eq("id", workoutId)
+      .single(),
+    supabase.from("groups").select("admin_user_id").eq("id", id).single(),
+  ]);
 
   if (!workout) redirect(`/group/${id}`);
+
+  const isAdmin = group?.admin_user_id === user.id;
+  const isCreator = workout.created_by === user.id;
+  if (!isAdmin && !isCreator) redirect(`/group/${id}`);
 
   return (
     <main className="mx-auto max-w-lg p-6 space-y-6">
