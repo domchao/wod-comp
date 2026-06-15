@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { subscribeUser } from "@/app/notifications/actions";
 
 function urlBase64ToUint8Array(base64: string) {
@@ -20,7 +20,6 @@ function getInitialPushState(): State {
 }
 
 const DISMISSED_KEY = "push-prompt-dismissed";
-const AUTO_DISMISS_MS = 10_000;
 
 function saveDismissed() {
   // localStorage can throw in private-browsing modes or when storage is full;
@@ -32,26 +31,44 @@ function saveDismissed() {
   }
 }
 
+function getStoredDismissed() {
+  try {
+    return localStorage.getItem(DISMISSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function subscribeToStorage(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
+
 export function PushNotificationPrompt() {
   const [state, setState] = useState<State>(getInitialPushState);
-  const [dismissed, setDismissed] = useState(() => {
-    try {
-      return typeof window !== "undefined" && localStorage.getItem(DISMISSED_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
+
+  // useSyncExternalStore provides an SSR-safe way to read localStorage: the
+  // server snapshot always returns false (no localStorage on the server), while
+  // the client snapshot reads the real value.  React suppresses the hydration
+  // mismatch for external stores, so a previously-dismissed user never sees
+  // the banner after a page reload even though the server-rendered HTML showed it.
+  const dismissedInStorage = useSyncExternalStore(
+    subscribeToStorage,
+    getStoredDismissed,
+    () => false
+  );
+
+  // Track same-tab dismissal separately: the browser storage event does not
+  // fire for writes made in the same tab, so dismissedInStorage won't update
+  // until the next render triggered by this state.
+  const [dismissedInSession, setDismissedInSession] = useState(false);
+
+  const dismissed = dismissedInStorage || dismissedInSession;
 
   function dismiss() {
     saveDismissed();
-    setDismissed(true);
+    setDismissedInSession(true);
   }
-
-  useEffect(() => {
-    const timer = setTimeout(dismiss, AUTO_DISMISS_MS);
-    return () => clearTimeout(timer);
-    // dismiss is stable (saveDismissed is module-level, setDismissed is from useState)
-  }, []);
 
   useEffect(() => {
     if (state !== "idle") return;
