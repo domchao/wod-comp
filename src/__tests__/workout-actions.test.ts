@@ -38,7 +38,11 @@ function buildSupabaseMock({
   insertError = null as string | null,
   uploadError = null as string | null,
   setterOverrideUserId = null as string | null,
+  insertSpy = null as ReturnType<typeof vi.fn> | null,
 } = {}) {
+  const insertFn =
+    insertSpy ??
+    vi.fn().mockResolvedValue({ error: insertError ? { message: insertError } : null });
   return {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER_ID } } }),
@@ -75,9 +79,7 @@ function buildSupabaseMock({
           maybeSingle: vi
             .fn()
             .mockResolvedValue({ data: workoutExists ? { id: "w-1" } : null, error: null }),
-          insert: vi
-            .fn()
-            .mockResolvedValue({ error: insertError ? { message: insertError } : null }),
+          insert: insertFn,
         };
       }
       if (table === "profiles") {
@@ -149,6 +151,15 @@ describe("createWorkout", () => {
 
     await expect(createWorkout(null, makeCreateFormData())).rejects.toThrow("redirect");
     expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/group/${GROUP_ID}`);
+  });
+
+  it("sets created_by to the current user id in the insert payload", async () => {
+    vi.mocked(getWeekSetter).mockReturnValue(USER_ID);
+    const insertSpy = vi.fn().mockResolvedValue({ error: null });
+    vi.mocked(createClient).mockResolvedValue(buildSupabaseMock({ insertSpy }) as never);
+
+    await expect(createWorkout(null, makeCreateFormData())).rejects.toThrow("redirect");
+    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({ created_by: USER_ID }));
   });
 
   it("redirects when the user is admin even if it is not their turn", async () => {
