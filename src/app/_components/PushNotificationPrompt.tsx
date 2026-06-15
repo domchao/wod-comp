@@ -51,7 +51,6 @@ export function PushNotificationPrompt() {
     const timer = setTimeout(dismiss, AUTO_DISMISS_MS);
     return () => clearTimeout(timer);
     // dismiss is stable (saveDismissed is module-level, setDismissed is from useState)
-     
   }, []);
 
   useEffect(() => {
