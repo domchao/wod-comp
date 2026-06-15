@@ -20,7 +20,6 @@ function getInitialPushState(): State {
 }
 
 const DISMISSED_KEY = "push-prompt-dismissed";
-const AUTO_DISMISS_MS = 10_000;
 
 function saveDismissed() {
   // localStorage can throw in private-browsing modes or when storage is full;
@@ -70,12 +69,6 @@ export function PushNotificationPrompt() {
     saveDismissed();
     setDismissedInSession(true);
   }
-
-  useEffect(() => {
-    const timer = setTimeout(dismiss, AUTO_DISMISS_MS);
-    return () => clearTimeout(timer);
-    // dismiss is stable (saveDismissed is module-level, setDismissedInSession is from useState)
-  }, []);
 
   useEffect(() => {
     if (state !== "idle") return;
