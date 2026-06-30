@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { ThemeToggle } from "./_components/ThemeToggle";
-import { PushNotificationPrompt } from "./_components/PushNotificationPrompt";
 import { InstallPrompt } from "./_components/InstallPrompt";
 import { createClient } from "@/lib/supabase/server";
 
@@ -50,7 +49,6 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col pb-16">
         {children}
         <ThemeToggle />
-        {user && <PushNotificationPrompt />}
         {user && <InstallPrompt />}
       </body>
     </html>
